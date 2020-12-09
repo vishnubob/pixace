@@ -1,14 +1,17 @@
-import funcs
+from PIL import Image
+from funcs import *
 import animals
+import random
 
 adb = animals.Animals()
 itr = adb.get_cursor()
-img = next(itr)
+img = list(itr)
+img = random.choice(img)()
 
-img.save("in.png")
-im = funcs.ImageBlocks(16, 16)
-a_img = funcs.process_image(img, im)
-im2 = funcs.process_array(a_img)
+img = Image.open("in.png")
+a_img = image_to_tokens(img, size=(4, 4))
+print(a_img)
+im2 = tokens_to_image(a_img)
 im2 = im2.resize((512, 512))
 im2.save("out.png")
 

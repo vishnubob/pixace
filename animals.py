@@ -41,7 +41,7 @@ class Animals(object):
         if shuffled:
             random.shuffle(toc)
         for item in toc:
-            yield self.load_image(item)
+            yield lambda: self.load_image(item)
 
 if __name__ == "__main__":
     a = Animals()
