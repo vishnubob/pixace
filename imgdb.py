@@ -4,13 +4,9 @@ from pathlib import Path
 from PIL import Image
 from fnmatch import fnmatch
 
-DatabasePath = "/mnt/media/Datasets/animal-faces"
-
-class Animals(object):
-    DefaultDatabasePath = DatabasePath
-
+class ImageDatabase(object):
     def __init__(self, dbpath=None):
-        self.dbpath = dbpath or self.DefaultDatabasePath
+        self.dbpath = dbpath
         self._load_db()
 
     def _load_db(self):
@@ -44,7 +40,6 @@ class Animals(object):
             yield lambda: self.load_image(item)
 
 if __name__ == "__main__":
-    a = Animals()
+    a = ImageDatabase("animal-faces")
     itr = a.get_cursor(group='/train/')
-    print(len([x.close() for x in itr]))
-
+    print(len([x for x in itr]))
