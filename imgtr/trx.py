@@ -62,10 +62,9 @@ def batch_dataset(imgdb, batch_size=1, group=None):
             yield batch
 
     def _outer(imgdb, batch_size=1, group=None):
-        pool = mp.Pool()
-        itr = _batch(_inner(imgdb, group), batch_size)
-        func = lambda it: it
-        batch_itr = pool.imap_unordered(_iden, itr)
+        pool = mp.Pool(4)
+        batch_itr = _batch(_inner(imgdb, group), batch_size)
+        batch_itr = pool.imap_unordered(_iden, batch_itr)
         for batch in batch_itr:
             yield batch
     
@@ -74,8 +73,9 @@ def batch_dataset(imgdb, batch_size=1, group=None):
         ary = jnp.ones((batch_size, max_length))
         while True:
             yield (ary.astype(jnp.int32), ary.astype(jnp.int32), ary)
-    #return _debug()
     return _outer(imgdb, batch_size, group)
+    #return _batch(_inner(imgdb, group), batch_size)
+    #return _debug()
 
 def train_model(argv):
     output_dir = FLAGS.model_dir
@@ -92,7 +92,7 @@ def train_model(argv):
 
     imgdb = ImageDatabase(FLAGS.images)
     train_itr = batch_dataset(imgdb, batch_size=FLAGS.batch_size, group="train")
-    eval_itr = batch_dataset(imgdb, batch_size=FLAGS.batch_size, group="eval")
+    eval_itr = batch_dataset(imgdb, batch_size=FLAGS.batch_size, group="val")
 
     train_task = training.TrainTask(
         labeled_data=train_itr,
