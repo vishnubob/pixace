@@ -207,7 +207,7 @@ class Transformer(nn.Module):
       output of a transformer decoder.
 
     """
-    padding_mask = jnp.where(inputs > 0, 1, 0).astype(jnp.float32)[..., None]
+    #padding_mask = jnp.where(inputs > 0, 1, 0).astype(jnp.float32)[..., None]
     assert inputs.ndim == 2  # (batch, len)
 
     cfg=self.config

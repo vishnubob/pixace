@@ -46,14 +46,12 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('model_dir', default='', help=('Directory for model data.'))
 
-flags.DEFINE_string('experiment', default='xpos', help=('Experiment name.'))
+flags.DEFINE_string('experiment', default='imgtr', help=('Experiment name.'))
 
 
-flags.DEFINE_integer(
-    'batch_size', default=64, help=('Batch size for training.'))
+flags.DEFINE_integer( 'batch_size', default=16, help=('Batch size for training.'))
 
-flags.DEFINE_integer(
-    'image_size', default=22, help=('Edge size for square image.'))
+flags.DEFINE_integer( 'image_size', default=22, help=('Edge size for square image.'))
 
 flags.DEFINE_string('bitdepth', default='5,4,4', help=('HSV bitdepths'))
 
@@ -193,32 +191,23 @@ def compute_metrics(logits, labels, weights):
   metrics = np.sum(metrics, -1)
   return metrics
 
-
-def train_step(optimizer, batch, learning_rate_fn, model, dropout_rng=None):
-  #train_keys = ['inputs', 'targets']
-  #(inputs, targets) = [batch.get(k, None) for k in train_keys]
-  #weights = jnp.where(targets > 0, 1, 0).astype(jnp.float32)
-  (inputs, targets, weights) = batch
-  dropout_rng, new_dropout_rng = random.split(dropout_rng)
-
-  @jax.jit
-  def loss_fn(params):
+def loss_fn(params, model, batch, dropout_rng):
     """Loss function used for training."""
+    (inputs, targets, weights) = batch
     logits = model.apply({'params': params}, inputs=inputs, train=True,
                          rngs={'dropout': dropout_rng})
     loss, weight_sum = compute_weighted_cross_entropy(logits, targets, weights)
     mean_loss = loss / weight_sum
     return mean_loss, logits
 
-  step = optimizer.state.step
-  lr = learning_rate_fn(step)
+def train_step(optimizer, batch, learning_rate, model, dropout_rng=None):
+  (inputs, targets, weights) = batch
+  dropout_rng, new_dropout_rng = random.split(dropout_rng)
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
-  (_, logits), grad = grad_fn(optimizer.target)
-  #grad = jax.lax.pmean(grad, 'batch')
-  new_optimizer = optimizer.apply_gradient(grad, learning_rate=lr)
+  (_, logits), grad = grad_fn(optimizer.target, model, batch, dropout_rng)
+  new_optimizer = optimizer.apply_gradient(grad, learning_rate=learning_rate)
   metrics = compute_metrics(logits, targets, weights)
-  metrics['learning_rate'] = lr
-
+  metrics['learning_rate'] = learning_rate
   return new_optimizer, metrics, new_dropout_rng
 
 def _iden(it):
@@ -256,8 +245,8 @@ def batch_dataset(imgdb, batch_size=1, group=None):
         ary = jnp.ones((batch_size, max_length))
         while True:
             yield (ary, ary, ary)
-    #return _debug()
-    return _outer(imgdb, batch_size, group)
+    return _debug()
+    #return _outer(imgdb, batch_size, group)
 
 def main(argv):
   if len(argv) > 1:
@@ -300,13 +289,8 @@ def main(argv):
   rng = random.PRNGKey(random_seed)
   rng, init_rng = random.split(rng)
 
-  # call a jitted initialization function to get the initial parameter tree
-  @jax.jit
-  def initialize_variables(init_rng):
-    init_batch = jnp.ones((1, config.max_len), jnp.float32)
-    init_variables = model.init(init_rng, inputs=init_batch, train=False)
-    return init_variables
-  init_variables = initialize_variables(init_rng)
+  init_batch = jnp.ones((1, config.max_len), jnp.float32)
+  init_variables = model.init(init_rng, inputs=init_batch, train=False)
 
   optimizer_def = optim.Adam(learning_rate, beta1=0.9, beta2=0.98,
       eps=1e-9, weight_decay=1e-1)
@@ -323,12 +307,13 @@ def main(argv):
 
   # We init the first set of dropout PRNG keys, but update it afterwards inside
   # the main pmap'd training update for performance.
-  dropout_rngs = random.split(rng, max(2, jax.local_device_count()))
+  (rng, dropout_rngs) = random.split(rng)
   metrics_all = []
   tick = time.time()
   best_dev_score = 0
-  for step, batch in zip(range(num_train_steps), train_iter):
-    optimizer, metrics, dropout_rngs = train_step(optimizer, batch, learning_rate_fn, model, dropout_rng=dropout_rngs) 
+  for (step, batch) in enumerate(train_iter):
+    learning_rate = learning_rate_fn(step)
+    (optimizer, metrics, dropout_rngs) = train_step(optimizer, batch, learning_rate, model, dropout_rng=dropout_rngs) 
     metrics_all.append(metrics)
 
     if (step + 1) % eval_freq == 0:
@@ -351,8 +336,7 @@ def main(argv):
       metrics_all = pd.DataFrame(metrics_all)
       eval_summary = metrics_all.mean().to_dict()
 
-      logging.info('eval in step: %d, loss: %.4f, accuracy: %.4f', step,
-                   eval_summary['loss'], eval_summary['accuracy'])
+      logging.info('eval in step: %d, loss: %.4f, accuracy: %.4f', step, eval_summary['loss'], eval_summary['accuracy'])
 
       if best_dev_score < eval_summary['accuracy']:
         best_dev_score = eval_summary['accuracy']
