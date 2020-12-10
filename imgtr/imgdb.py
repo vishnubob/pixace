@@ -10,6 +10,8 @@ class ImageDatabase(object):
         self._load_db()
 
     def _load_db(self):
+        assert os.path.exists(self.dbpath)
+        print(f"Loading image database from '{self.dbpath}'")
         self._db = {}
         pat = "*.jpg"
         match_img = lambda fn: fnmatch(fn, pat)

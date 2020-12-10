@@ -7,6 +7,9 @@ from skimage.util import crop
 # bits for hsv: 5, 4, 4
 bitdepth = (5, 4, 4)
 
+def token_count(bitdepth=bitdepth):
+    return (2 ** sum(bitdepth))
+
 def quantize(img, bitdepth=bitdepth):
     maxvals = [2 ** bits - 1 for bits in bitdepth]
     img = np.round(img * maxvals).astype(np.int32)
@@ -54,8 +57,8 @@ def array_to_image(img_array, dnr=(0, 1)):
     o_img = Image.fromarray(img_array)
     return o_img
 
-def image_to_tokens(img, size=(16, 16)):
-    img = img.resize(size)
+def image_to_tokens(img, size=16):
+    img = img.resize((size, size))
     img = image_to_array(img)
     img = rgb2hsv(img)
     img = pack(img)

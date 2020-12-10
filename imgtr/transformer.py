@@ -226,4 +226,3 @@ class Transformer(nn.Module):
         kernel_init=cfg.kernel_init,
         bias_init=cfg.bias_init)(x)
     return logits
-
