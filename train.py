@@ -1,3 +1,4 @@
-from imgtr import train
+from imgtr import trx
+
 if __name__ == "__main__":
-    train.run()
+    trx.run()
