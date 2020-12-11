@@ -120,5 +120,53 @@ def train_model(argv):
         backup_checkpoint(output_dir, training_loop)
         #lm_generate_example(training_loop, eval_batch, train_model, dc_train.captions)
 
+def predict_model(argv):
+    output_dir = FLAGS.model_dir
+    #batch_size = FLAGS.batch_size
+    batch_size = 1
+
+    bitdepth = [int(x) for x in FLAGS.bitdepth.split(',')]
+    assert len(bitdepth) == 3
+
+    vocab_size = tokens.token_count(bitdepth=bitdepth)
+    max_length = FLAGS.image_size ** 2
+    model = trax.models.TransformerLM(vocab_size, max_len=max_length)
+
+    imgdb = ImageDatabase(FLAGS.images)
+    train_itr = batch_dataset(imgdb, batch_size=batch_size, group="train")
+    eval_itr = batch_dataset(imgdb, batch_size=batch_size, group="val")
+
+    example = np.zeros([batch_size, max_length]).astype(np.int32)
+    signature = trax.shapes.signature(example)
+    model.init_from_file(f"{output_dir}/model.pkl.gz", weights_only=True, input_signature=signature)
+    #model.init_from_file(f"{output_dir}/model-88000.pkl.gz", weights_only=True, input_signature=signature)
+
+    batch = next(eval_itr)
+    orig = batch[0][:] 
+    orig = [np.append(orig, [0])]
+    orig = [tokens.tokens_to_image(ary) for ary in orig]
+
+    batch = batch[0].T[:max_length // 2].T
+
+    tok_images = trax.supervised.decoding.autoregressive_sample(
+            model, 
+            batch, 
+            start_id=batch[0][-1],
+            eos_id=-1,
+            temperature=0,
+            max_length=max_length)
+
+    #images = [tokens.tokens_to_image(ary) for ary in tok_images]
+    for (idx, gen) in enumerate(tok_images):
+        print(gen)
+        gen = tokens.tokens_to_image(gen)
+        gen = gen.resize((512, 512))
+        gen.save(f"example-{1 + idx:03d}.png")
+        seed = orig[idx]
+        seed = seed.resize((512, 512))
+        seed.save(f"seed-{1 + idx:03d}.png")
+        
+    print(tok_images.shape)
+
 def run():
-    app.run(train_model)
+    app.run(predict_model)

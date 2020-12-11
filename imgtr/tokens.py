@@ -19,6 +19,7 @@ def quantize(img, bitdepth=bitdepth):
 def unquantize(img, bitdepth=bitdepth):
     maxvals = [2 ** bits - 1 for bits in bitdepth]
     img = img.astype(np.float) / maxvals
+    img = np.clip(img, 0, 1)
     assert np.all(img <= 1) and np.all(img >= 0)
     return img
 
