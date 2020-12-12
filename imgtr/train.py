@@ -58,6 +58,10 @@ def train_model(argv):
         output_dir=output_dir
     )
 
+    chkpt = os.path.join(output_dir, f"model.pkl.gz")
+    if os.path.exists(chkpt):
+        training_loop.load_checkpoint()
+
     for epoch in range(n_epochs):
         training_loop.run(steps_per_epoch)
         backup_checkpoint(output_dir, training_loop)

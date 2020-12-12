@@ -30,7 +30,7 @@ class ListWorker(mp.Process):
     def _enque(self, item):
         with self._qcon:
             while self._que.full():
-                self._qcon.wait()
+                self._qcon.wait(1)
                 if not self._running:
                     return
             self._que.put(item)
@@ -68,7 +68,7 @@ def _deque(que, qcon):
     with qcon:
         while que.empty():
             print(f"_deque(): queue empty")
-            qcon.wait()
+            qcon.wait(1)
         item = que.get()
         qcon.notify()
     return item
