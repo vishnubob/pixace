@@ -58,15 +58,15 @@ def array_to_image(img_array, dnr=(0, 1)):
     o_img = Image.fromarray(img_array)
     return o_img
 
-def image_to_tokens(img, size=16):
+def image_to_tokens(img, size=16, bitdepth=bitdepth):
     img = img.resize((size, size))
     img = image_to_array(img)
     img = rgb2hsv(img)
-    img = pack(img)
+    img = pack(img, bitdepth=bitdepth)
     return img
 
-def tokens_to_image(img):
-    img = unpack(img)
+def tokens_to_image(img, bitdepth=bitdepth):
+    img = unpack(img, bitdepth=bitdepth)
     img = hsv2rgb(img)
     img = array_to_image(img)
     return img
