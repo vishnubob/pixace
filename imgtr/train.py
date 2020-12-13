@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import numpy as np
 from absl import logging
 
 import trax
@@ -11,6 +12,16 @@ from . globdb import GlobDatabase
 from . data import iter_dataset
 from . import tokens
 from . layers import WeightedCategoryAccuracy, WeightedCategoryCrossEntropy
+
+
+def generate_sample_images(training_loop, batch_itr, model):
+    inp = next(batch_itr)[0]
+    logits = model(inp)
+    toks = np.argmax(logits, axis=-1)
+    with training_loop._open_summary_writers() as (stl, sel):
+        images = [tokens.tokens_to_image_array(toks) for toks in toks]
+        images = (np.array(images) * 0xFF).astype(np.uint8)
+        sel[0].images(f"gen/{training_loop._step}", images=images, step=training_loop._step, rows=2)
 
 def backup_checkpoint(output_dir, training_loop):
     old_path = os.path.join(output_dir, f"model.pkl.gz")
@@ -32,7 +43,6 @@ def train_model(argv):
     model = trax.models.TransformerLM(vocab_size, max_len=max_length)
 
     imgdb = GlobDatabase(FLAGS.images, "*.jpg")
-
     work_list = imgdb.select("train")
     train_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="train")
     work_list = imgdb.select("val")
@@ -62,7 +72,8 @@ def train_model(argv):
     if os.path.exists(chkpt):
         training_loop.load_checkpoint()
 
+    generate_sample_images(training_loop, eval_itr, model)
     for epoch in range(n_epochs):
         training_loop.run(steps_per_epoch)
         backup_checkpoint(output_dir, training_loop)
-        #lm_generate_example(training_loop, eval_batch, train_model, dc_train.captions)
+        generate_sample_images(training_loop, eval_itr, model)

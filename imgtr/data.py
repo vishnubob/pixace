@@ -55,7 +55,28 @@ class ListWorker(mp.Process):
             self._enque(batch)
 
 class ImageWorker(ListWorker):
-    def _do_work(self, img_name):
+    def _task_fill_image(self, img_name):
+        img_path = self._work_list[img_name]
+        img = Image.open(img_path)
+        toks = tokens.image_to_tokens(img, size=FLAGS.image_size)
+
+        fill_val = tokens.special_token("<fill>")
+        top_len = len(toks) // 2
+        bot_len = len(toks) - top_len
+
+        x = list(toks[:top_len]) + ([fill_val] * bot_len)
+        w = ([0] * top_len) + ([1] * bot_len)
+        y = list(toks)
+
+        x = np.array(x).astype(np.int32)
+        y = np.array(y).astype(np.int32)
+        w = np.array(w).astype(np.float)
+
+        return (x, y, w)
+
+    _do_work = _task_fill_image
+
+    def _task_next_token(self, img_name):
         img_path = self._work_list[img_name]
         img = Image.open(img_path)
         toks = tokens.image_to_tokens(img, size=FLAGS.image_size)

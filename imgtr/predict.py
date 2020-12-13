@@ -7,6 +7,7 @@ from trax import layers as tl
 from absl import logging
 
 from . import tokens
+from . data import iter_dataset
 from . flags import FLAGS
 from . globdb import GlobDatabase
 
@@ -25,22 +26,22 @@ def greedy_search(batch, model, start_idx, max_length):
 def predict_model(argv):
     output_dir = FLAGS.model_dir
     batch_size = FLAGS.batch_size
+    bitdepth = FLAGS.bitdepth
 
-    bitdepth = [int(x) for x in FLAGS.bitdepth.split(',')]
-    assert len(bitdepth) == 3
-
-    vocab_size = tokens.token_count(bitdepth=bitdepth)
+    n_tokens = tokens.token_count(bitdepth=bitdepth)
     max_length = FLAGS.image_size ** 2
-    model = trax.models.TransformerLM(vocab_size, max_len=max_length, mode='predict')
-
-    imgdb = ImageDatabase(FLAGS.images)
-    train_itr = batch_dataset(imgdb, batch_size=batch_size, group="train")
-    eval_itr = batch_dataset(imgdb, batch_size=batch_size, group="val")
+    model = trax.models.TransformerLM(n_tokens, max_len=max_length, mode='predict')
 
     example = np.zeros([batch_size, max_length]).astype(np.int32)
     signature = trax.shapes.signature(example)
-    #model.init_from_file(f"{output_dir}/model.pkl.gz", weights_only=True, input_signature=signature)
-    model.init_from_file(f"{output_dir}/model-88000.pkl.gz", weights_only=True, input_signature=signature)
+    model.init_from_file(f"{output_dir}/model.pkl.gz", weights_only=True, input_signature=signature)
+    #model.init_from_file(f"{output_dir}/model-88000.pkl.gz", weights_only=True, input_signature=signature)
+
+    imgdb = GlobDatabase(FLAGS.images, "*.jpg")
+    work_list = imgdb.select("train")
+    train_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="train")
+    work_list = imgdb.select("val")
+    eval_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="val")
 
     batch = next(eval_itr)
     inp = batch[0]
@@ -56,19 +57,20 @@ def predict_model(argv):
     inp = np.append(top, bottom, axis=-1)
     inp = jnp.array(inp)
 
-    tok_images = greedy_search(inp, model, seed_len, max_length)
+    #tok_images = greedy_search(inp, model, seed_len, max_length)
 
     """
     tok_images = trax.supervised.decoding.autoregressive_sample(
             model, 
-            batch, 
-            start_id=batch[0][-1],
+            inp, 
+            start_id=-1,
             eos_id=-1,
-            temperature=0,
+            batch_size=batch_size,
+            temperature=0.1,
             max_length=max_length)
     """
 
-    #images = [tokens.tokens_to_image(ary) for ary in tok_images]
+    tok_images = inp
     for (idx, gen) in enumerate(tok_images):
         gen = tokens.tokens_to_image(gen, bitdepth=bitdepth)
         gen = gen.resize((512, 512))
@@ -76,3 +78,4 @@ def predict_model(argv):
         seed = orig[idx]
         seed = seed.resize((512, 512))
         seed.save(f"seed-{1 + idx:03d}.png")
+

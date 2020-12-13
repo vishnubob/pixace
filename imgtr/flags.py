@@ -10,7 +10,7 @@ if 'FLAGS' not in locals():
     flags.DEFINE_string('run_name', _get_ts(), help=('Run name.'))
     flags.DEFINE_integer('batch_size', 16, help=('Batch size for training.'))
     flags.DEFINE_integer('steps_per_epoch', 1000, help=('number of epochs'))
-    flags.DEFINE_integer('n_epochs', 100, help=('Total number of epochs'))
+    flags.DEFINE_integer('n_epochs', 10000, help=('Total number of epochs'))
     flags.DEFINE_integer('image_size', 22, help=('Edge size for square image.'))
     flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
     flags.DEFINE_string('images', "images", help=('Path to images used for training and evalution'))
