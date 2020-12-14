@@ -85,6 +85,7 @@ def tokens_to_image_array(img, bitdepth=None):
 
 def tokens_to_image(img, bitdepth=None):
     bitdepth = bitdepth or FLAGS.bitdepth
-    img = tokens_to_array_array(img)
-    img = array_to_image(img)
+    i_ary = tokens_to_image_array(img, bitdepth=bitdepth)
+    img = array_to_image(i_ary)
     return img
+

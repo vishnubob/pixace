@@ -39,38 +39,35 @@ def predict_model(argv):
 
     imgdb = GlobDatabase(FLAGS.images, "*.jpg")
     work_list = imgdb.select("train")
-    train_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="train")
-    work_list = imgdb.select("val")
-    eval_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="val")
+    itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="train")
+    #work_list = imgdb.select("val")
+    #itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="val")
+    batch = next(itr)
+    del itr
 
-    batch = next(eval_itr)
     inp = batch[0]
     orig = np.copy(inp)
-    fill = [[0]] * batch_size
-    orig = np.append(orig, fill, axis=-1)
     orig = [tokens.tokens_to_image(ary, bitdepth=bitdepth) for ary in orig]
 
-    seed_len = max_length // 2
-    fill_len = max_length - seed_len
-    top = inp[:, :max_length // 2]
-    bottom = np.zeros((batch_size, fill_len), dtype=np.int32)
-    inp = np.append(top, bottom, axis=-1)
-    inp = jnp.array(inp)
+    if True:
+        tok_images = greedy_search(inp, model, max_length // 2, max_length)
+    else:
+        start_id = -1
+        inp = inp[:, :max_length // 2]
 
-    #tok_images = greedy_search(inp, model, seed_len, max_length)
+        #start_id = tokens.special_token("<fill>")
+        #inp = inp[:, :max_length // 2 + 1]
 
-    """
-    tok_images = trax.supervised.decoding.autoregressive_sample(
-            model, 
-            inp, 
-            start_id=-1,
-            eos_id=-1,
-            batch_size=batch_size,
-            temperature=0.1,
-            max_length=max_length)
-    """
+        tok_images = trax.supervised.decoding.autoregressive_sample(
+                model, 
+                inp, 
+                start_id=start_id,
+                eos_id=-1,
+                batch_size=batch_size,
+                temperature=.25,
+                max_length=max_length
+        )
 
-    tok_images = inp
     for (idx, gen) in enumerate(tok_images):
         gen = tokens.tokens_to_image(gen, bitdepth=bitdepth)
         gen = gen.resize((512, 512))

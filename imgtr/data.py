@@ -55,18 +55,14 @@ class ListWorker(mp.Process):
             self._enque(batch)
 
 class ImageWorker(ListWorker):
-    def _task_fill_image(self, img_name):
-        img_path = self._work_list[img_name]
-        img = Image.open(img_path)
-        toks = tokens.image_to_tokens(img, size=FLAGS.image_size)
-
-        fill_val = tokens.special_token("<fill>")
+    def _task_fill_image(self, toks):
+        fill = tokens.special_token("<fill>")
         top_len = len(toks) // 2
         bot_len = len(toks) - top_len
 
-        x = list(toks[:top_len]) + ([fill_val] * bot_len)
+        x = toks[:top_len] + ([fill] * bot_len)
         w = ([0] * top_len) + ([1] * bot_len)
-        y = list(toks)
+        y = toks[:]
 
         x = np.array(x).astype(np.int32)
         y = np.array(y).astype(np.int32)
@@ -74,16 +70,22 @@ class ImageWorker(ListWorker):
 
         return (x, y, w)
 
-    _do_work = _task_fill_image
+    def _task_next_token(self, toks):
+        pad = tokens.special_token("<pad>")
+        x = np.array(toks[:-1] + [pad]).astype(np.int32)
+        y = np.array(toks[1:] + [pad]).astype(np.int32)
+        w = ([1] * (len(x) - 1))  + [0]
+        w = np.array(w).astype(np.float)
+        return (x, y, w)
 
-    def _task_next_token(self, img_name):
+    def _do_work(self, img_name):
         img_path = self._work_list[img_name]
         img = Image.open(img_path)
         toks = tokens.image_to_tokens(img, size=FLAGS.image_size)
-        x = np.array(toks[:-1]).astype(np.int32)
-        y = np.array(toks[1:]).astype(np.int32)
-        w = np.ones_like(x).astype(np.float)
-        return (x, y, w)
+        toks = list(toks)
+        work = self._task_next_token(toks)
+        assert len(set([len(it) for it in work])) == 1
+        return work
 
 def _deque(que, qcon):
     with qcon:
