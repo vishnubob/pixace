@@ -2,8 +2,6 @@ import pickle
 import gzip
 import trax
 import jax
-from . beam_search import Search as BeamSearch
-
 import numpy as np
 from jax import numpy as jnp
 from trax import layers as tl
@@ -25,21 +23,7 @@ def load_weights(chkpt):
         obj = pickle.load(gz)
     return obj["flat_weights"]
 
-def beam_search(model, chkpt, inp, max_length=None, beam_size=1, temperature=0, alpha=0.0):
-    weights = load_weights(chkpt)
-    bs = BeamSearch(
-        model,
-        weights,
-        max_length,
-        beam_size=beam_size,
-        temperature=temperature,
-        alpha=alpha,
-        eos_id=-1
-    )
-    inp = inp[:, :max_length // 2]
-    return bs.decode(None, inp, batch_size=inp.shape[0])
-
-def _beam_search(data, k=3):
+def beam_search(data, k=3):
     import pprint
     from math import log
     sequences = [[list(), 0.0]]
@@ -110,7 +94,6 @@ def predict_model(argv):
     if 0:
         def t_cstr(mode='predict'):
             return trax.models.TransformerLM(n_tokens, max_len=max_length, mode=mode)
-
         tok_images = beam_search(t_cstr, chkpt, inp, max_length)
 
     if 1:
