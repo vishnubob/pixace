@@ -78,12 +78,24 @@ class ImageWorker(ListWorker):
         w = np.array(w).astype(np.float)
         return (x, y, w)
 
+    def _auto_regress(self, toks):
+        fill = tokens.special_token("<fill>")
+        pad = tokens.special_token("<pad>")
+
+        x = np.array(toks[:-1] + [fill]).astype(np.int32)
+        y = np.array([pad] + toks[1:]).astype(np.int32)
+        w = ([0] * (len(x) - 1))  + [1]
+        w = np.array(w).astype(np.float)
+
+        return (x, y, w)
+
     def _do_work(self, img_name):
         img_path = self._work_list[img_name]
         img = Image.open(img_path)
         toks = tokens.image_to_tokens(img, size=FLAGS.image_size)
         toks = list(toks)
-        work = self._task_next_token(toks)
+        #work = self._task_next_token(toks)
+        work = self._auto_regress(toks)
         assert len(set([len(it) for it in work])) == 1
         return work
 
