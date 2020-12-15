@@ -1,3 +1,6 @@
+*.py
+model-weights
+*.png
 tarpit
 __pycache__
 animal-faces
