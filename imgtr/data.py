@@ -43,7 +43,7 @@ class ListWorker(mp.Process):
         assert self._batch_size > 0
         # get list of work
         batch = [next(itr) for idx in range(self._batch_size)]
-        batch = map(self._do_work, batch)
+        batch = list(map(self._do_work, batch))
         batch = [np.vstack(it) for it in zip(*batch)]
         return batch
 
@@ -92,12 +92,10 @@ class ImageWorker(ListWorker):
     def _do_work(self, img_name):
         img_path = self._work_list[img_name]
         img = Image.open(img_path)
-        toks = tokens.image_to_tokens(img, size=FLAGS.image_size)
-        toks = list(toks)
-        #work = self._task_next_token(toks)
-        work = self._auto_regress(toks)
-        assert len(set([len(it) for it in work])) == 1
-        return work
+        work = tokens.image_to_tokens(img, size=FLAGS.image_size)
+        work = np.array(work).astype(np.int32)
+        mask = np.ones_like(work, dtype=np.float)
+        return (work, work, mask)
 
 def _deque(que, qcon):
     with qcon:

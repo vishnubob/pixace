@@ -13,7 +13,6 @@ from . data import iter_dataset
 from . import tokens
 from . layers import WeightedCategoryAccuracy, WeightedCategoryCrossEntropy
 
-
 def generate_sample_images(training_loop, batch_itr, model):
     inp = next(batch_itr)[0]
     logits = model(inp)
@@ -48,16 +47,21 @@ def train_model(argv):
     work_list = imgdb.select("val")
     eval_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="val")
 
+    opt = trax.optimizers.Adam()
+    loss = trax.layers.CrossEntropyLoss()
+    lr = trax.lr.multifactor()
+
     train_task = training.TrainTask(
         labeled_data=train_itr,
-        loss_layer=WeightedCategoryCrossEntropy(),
-        optimizer=trax.optimizers.Adam(0.01),
+        loss_layer=loss,
+        lr_schedule=lr,
+        optimizer=opt,
         n_steps_per_checkpoint=steps_per_epoch,
     )
 
     eval_task = training.EvalTask(
         labeled_data=eval_itr,
-        metrics=[WeightedCategoryCrossEntropy(), WeightedCategoryAccuracy()],
+        metrics=[trax.layers.CrossEntropyLoss(), trax.layers.Accuracy()],
         n_eval_batches=steps_per_epoch // 10
     )
 
@@ -77,3 +81,4 @@ def train_model(argv):
         training_loop.run(steps_per_epoch)
         backup_checkpoint(output_dir, training_loop)
         generate_sample_images(training_loop, eval_itr, model)
+

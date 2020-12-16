@@ -6,18 +6,17 @@ from skimage.util import crop
 from . flags import FLAGS
 
 SpecialSymbols = (
-    '<fill>',
     '<pad>',
+    '<fill>',
 )
+n_reserved = len(SpecialSymbols)
 
 def token_count(bitdepth=None):
     bitdepth = bitdepth or FLAGS.bitdepth
     return (2 ** sum(bitdepth)) + len(SpecialSymbols)
 
 def special_token(symbol, bitdepth=None):
-    bitdepth = bitdepth or FLAGS.bitdepth
-    idx = SpecialSymbols.index(symbol)
-    return (2 ** sum(bitdepth)) + idx
+    return SpecialSymbols.index(symbol)
 
 def quantize(img, bitdepth=None):
     maxvals = [2 ** bits - 1 for bits in bitdepth]
@@ -32,15 +31,17 @@ def unquantize(img, bitdepth=None):
     assert np.all(img <= 1) and np.all(img >= 0)
     return img
 
-def pack(img, bitdepth=None):
+def pack(img, bitdepth=None, n_reserved=n_reserved):
     img = quantize(img, bitdepth=bitdepth)
     img[:, :, 1] <<= bitdepth[0]
     img[:, :, 2] <<= sum(bitdepth[:2])
     img = img[:, :, 0] | img[:, :, 1] | img[:, :, 2]
-    img = np.ravel(img)
+    img = np.ravel(img) + n_reserved
     return img
 
-def unpack(img, bitdepth=None):
+def unpack(img, bitdepth=None, n_reserved=n_reserved):
+    # reserved valued
+    img = img - n_reserved
     # lop off anything too big, and wrap back
     img = img % token_count(bitdepth=bitdepth)
     first = img & (2 ** bitdepth[0] - 1)

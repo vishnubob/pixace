@@ -54,7 +54,7 @@ def load_model(chkpt, n_tokens=None, batch_size=None, max_length=None):
     model.init_from_file(chkpt, weights_only=True, input_signature=signature)
     return model
 
-def greedy_search(batch, model, start_idx, max_length, temperature=0.5):
+def greedy_search(batch, model, start_idx, max_length, temperature=0.001):
     model = tl.Accelerate(model)
     from tqdm import tqdm
 
@@ -62,7 +62,7 @@ def greedy_search(batch, model, start_idx, max_length, temperature=0.5):
     itr = tqdm(list(range(start_idx, max_length)))
     for pos in itr:
         output = model(batch)
-        sample = tl.logsoftmax_sample(output[:, pos, :], temperature=temperature)
+        sample = tl.logsoftmax_sample(output[:, pos + 1, :], temperature=temperature)
         #next_vals = jnp.squeeze(sample[:, -1])
         batch = jax.ops.index_update(
             batch, 
@@ -78,6 +78,7 @@ def predict_model(argv):
     n_tokens = tokens.token_count(bitdepth=bitdepth)
     max_length = FLAGS.image_size ** 2
     chkpt = f"{output_dir}/model.pkl.gz"
+    #chkpt = f"{output_dir}/model-574000.pkl.gz"
 
     imgdb = GlobDatabase(FLAGS.images, "*.jpg")
     work_list = imgdb.select("train")
@@ -99,7 +100,8 @@ def predict_model(argv):
     if 1:
         inp = inp[:, :max_length // 2]
         pad_val = tokens.special_token("<pad>")
-        pad = np.ones((inp.shape[0], max_length - max_length // 2)).astype(np.int32) * pad_val
+        fill_val = tokens.special_token("<pad>")
+        pad = np.ones((inp.shape[0], max_length - max_length // 2)).astype(np.int32) * fill_val
         inp = np.concatenate((inp, pad), axis=-1)
         model = load_model(chkpt, n_tokens, batch_size, max_length)
         tok_images = greedy_search(inp, model, max_length // 2, max_length)
