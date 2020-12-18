@@ -56,12 +56,12 @@ class ListWorker(mp.Process):
 
 class ImageWorker(ListWorker):
     def _task_fill_image(self, toks):
+        n_toks = len(toks)
         fill = tokens.special_token("<fill>")
-        top_len = len(toks) // 2
-        bot_len = len(toks) - top_len
-
-        x = toks[:top_len] + ([fill] * bot_len)
-        w = ([0] * top_len) + ([1] * bot_len)
+        cut = random.randint(1, n_toks - 1)
+        x = toks[:cut] + ([fill] * (n_toks - cut))
+        w = ([0] * n_toks)
+        w[cut] = 1
         y = toks[:]
 
         x = np.array(x).astype(np.int32)
@@ -78,24 +78,20 @@ class ImageWorker(ListWorker):
         w = np.array(w).astype(np.float)
         return (x, y, w)
 
-    def _auto_regress(self, toks):
-        fill = tokens.special_token("<fill>")
-        pad = tokens.special_token("<pad>")
-
-        x = np.array(toks[:-1] + [fill]).astype(np.int32)
-        y = np.array([pad] + toks[1:]).astype(np.int32)
-        w = ([0] * (len(x) - 1))  + [1]
-        w = np.array(w).astype(np.float)
-
-        return (x, y, w)
+    def _auto_regress(self, work):
+        work = np.array(work).astype(np.int32)
+        mask = np.ones_like(work, dtype=np.float)
+        return (work, work, mask)
 
     def _do_work(self, img_name):
         img_path = self._work_list[img_name]
         img = Image.open(img_path)
         work = tokens.image_to_tokens(img, size=FLAGS.image_size)
-        work = np.array(work).astype(np.int32)
-        mask = np.ones_like(work, dtype=np.float)
-        return (work, work, mask)
+        work = list(work)
+        #work = self._auto_regress(work)
+        work = self._task_fill_image(work)
+        assert len(work) == 3
+        return work
 
 def _deque(que, qcon):
     with qcon:

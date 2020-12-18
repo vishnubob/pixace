@@ -14,6 +14,7 @@ if 'FLAGS' not in locals():
     flags.DEFINE_integer('image_size', 22, help=('Edge size for square image.'))
     flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
     flags.DEFINE_string('images', "images", help=('Path to images used for training and evalution'))
+    flags.DEFINE_string('checkpoint', None, help=('Path to checkpoint to load'))
 
 @flags.validator("bitdepth", "bitdepth requires three comma seperated ints")
 def _validate_bitdepth(value):

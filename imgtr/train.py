@@ -72,9 +72,12 @@ def train_model(argv):
         output_dir=output_dir
     )
 
-    chkpt = os.path.join(output_dir, f"model.pkl.gz")
-    if os.path.exists(chkpt):
-        training_loop.load_checkpoint()
+    training_loop.run(1)
+    if FLAGS.checkpoint:
+        print(f"Loading weights from {FLAGS.checkpoint}")
+        example = np.zeros([batch_size, max_length]).astype(np.int32)
+        signature = trax.shapes.signature(example)
+        model.init_from_file(FLAGS.checkpoint, weights_only=True, input_signature=signature)
 
     generate_sample_images(training_loop, eval_itr, model)
     for epoch in range(n_epochs):

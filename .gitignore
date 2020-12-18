@@ -4,3 +4,4 @@ model-weights
 tarpit
 __pycache__
 animal-faces
+.*.sw?
