@@ -21,66 +21,78 @@ def load_weights(chkpt):
         obj = pickle.load(gz)
     return obj["flat_weights"]
 
+gin_config = \
+""" 
+trax.layers.SelfAttention.chunk_len = 64
+trax.layers.SelfAttention.predict_drop_len = 128
+trax.layers.SelfAttention.predict_mem_len = 1024
+LSHSelfAttention.n_hashes = 4
+"""
+
+def load_gin():
+    import gin
+    gin.parse_config(gin_config)
+
 def load_model(chkpt, n_tokens=None, batch_size=None, max_length=None):
+    load_gin()
     print(f"Loading {chkpt} for inference")
-    model = trax.models.TransformerLM(n_tokens, max_len=max_length, mode='train')
+    #model = trax.models.TransformerLM(n_tokens, max_len=max_length, mode='train')
+    model = trax.models.ReformerLM(n_tokens, max_len=max_length, mode='predict')
     example = np.zeros([batch_size, max_length]).astype(np.int32)
     signature = trax.shapes.signature(example)
     model.init_from_file(chkpt, weights_only=True, input_signature=signature)
     return model
 
-def sample_stream(batch, model, start_pos=None, temperature=0):
-    model = tl.Accelerate(model)
+def sample_stream(batch, model, cut=None, temperature=1.0):
+    #model = tl.Accelerate(model)
     fill_val = tokens.special_token("<fill>")
     pad_val = tokens.special_token("<pad>")
     (_, inp, _) = batch
+    truth = inp[:, :]
     max_length = inp.shape[-1]
-    start_pos = start_pos or max_length // 2
-    for pos in range(start_pos, max_length):
+    cut = cut or max_length // 2
+
+    for pos in range(cut, max_length - 1):
         inp = inp[:, :pos]
-        pad = jnp.ones((inp.shape[0], max_length - pos)).astype(jnp.int32) * fill_val
+        pad = jnp.zeros((inp.shape[0], max_length - pos)).astype(jnp.int32)
         inp = np.concatenate((inp, pad), axis=-1)
         output = model(inp)
-        samples = tl.logsoftmax_sample(output[:, pos, :], temperature=temperature)
+        samples = tl.logsoftmax_sample(output[:, :, :], temperature=temperature)
         inp = jax.ops.index_update(
             inp, 
             jax.ops.index[:, pos], 
-            samples
+            samples[:, pos]
         )
     yield inp
+    yield truth
 
-def sample(inp, model, templist=[0, .01, .25, .5]):
+def autoreg(model, max_length):
+    out = trax.supervised.decoding.autoregressive_sample(model, temperature=1.0, max_length=max_length)
+    yield out
+
+def sample(batch, model, cut=None, templist=[0, .1, .5, 1]):
     fill_val = tokens.special_token("<fill>")
     pad_val = tokens.special_token("<pad>")
-    """
-    cut = inp.shape[-1] // 2
-    inp = inp[:, :-cut]
-    #pad = np.zeros((inp.shape[0], cut)).astype(np.int32)
-    pad = np.ones((inp.shape[0], cut)).astype(np.int32) * fill_val
-    batch = np.concatenate((inp, pad), axis=-1)
-    """
-    #model = tl.Accelerate(model)
+    (inp, truth, _) = batch
+    max_length = inp.shape[-1]
+    if cut is not None:
+        inp = inp[:, :-cut]
+        pad = np.ones((inp.shape[0], max_length - cut)).astype(np.int32) * pad_val
+        inp = np.concatenate((inp, pad), axis=-1)
+        yield inp
+
+    model = tl.Accelerate(model)
     output = model(inp)
+
     for temp in templist:
         if temp == 0:
             samples = jnp.argmax(output, axis=-1)
         else:
             samples = tl.logsoftmax_sample(output, temperature=temp)
+        #samples = np.pad(samples, ((0, 0), (1, 0)))
+        #samples = samples[:, :-1]
         yield samples
-
-def auto_regressive_sample(inp, model, temperature=0.0):
-    (batch_size, max_length) = inp.shape
-    inp = inp[:, :max_length // 2]
-
-    return trax.supervised.decoding.autoregressive_sample(
-            model,
-            inp,
-            start_id=-1,
-            eos_id=-1,
-            batch_size=batch_size,
-            temperature=temperature,
-            max_length=max_length
-    )
+    yield truth
 
 def predict_model(argv):
     output_dir = FLAGS.model_dir
@@ -97,22 +109,17 @@ def predict_model(argv):
     batch = next(itr)
     del itr
 
-    inp = batch[0]
-
     model = load_model(checkpoint, n_tokens, batch_size, max_length)
-    tok_images = sample_stream(batch, model)
-    #tok_images = sample(inp, model)
-    #tok_images = auto_regressive_sample(inp, model)
+    #tok_images = sample_stream(batch, model, cut=32 * 24)
+    #tok_images = sample(batch, model, cut=max_length // 2)
+    tok_images = autoreg(model, max_length)
 
-    row = [tokens.tokens_to_image_array(ary, bitdepth=bitdepth) for ary in batch[0]]
-    rows = [np.vstack(row)]
+    rows = []
     for row in tok_images:
         row = [tokens.tokens_to_image_array(it, bitdepth=bitdepth) for it in row]
         row = np.vstack(row)
         rows.append(row)
-    row = [tokens.tokens_to_image_array(ary, bitdepth=bitdepth) for ary in batch[1]]
-    row = np.vstack(row)
-    rows.append(row)
+
     n_rows = len(rows)
     tbl = np.hstack(rows)
     img = tokens.array_to_image(tbl)
@@ -120,4 +127,3 @@ def predict_model(argv):
     height = scale * batch_size
     img = img.resize((width, height))
     img.save("collage.png")
-

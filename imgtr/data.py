@@ -59,10 +59,11 @@ class ImageWorker(ListWorker):
         n_toks = len(toks)
         fill = tokens.special_token("<fill>")
         pad = tokens.special_token("<pad>")
-        cut = random.randint(1, n_toks - 1)
+        cut = random.randint(2, n_toks - 1)
+        y = toks[:]
         x = toks[:cut] + ([pad] * (n_toks - cut))
         w = ([0] * n_toks)
-        y = toks[:]
+        w[cut] = 1
 
         x = np.array(x).astype(np.int32)
         y = np.array(y).astype(np.int32)
