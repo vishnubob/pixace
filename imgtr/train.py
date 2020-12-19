@@ -17,6 +17,8 @@ def generate_sample_images(training_loop, batch_itr, model):
     inp = next(batch_itr)[0]
     logits = model(inp)
     toks = np.argmax(logits, axis=-1)
+    toks = np.pad(toks, ((0, 0), (1, 0)))[:, :-1]
+
     with training_loop._open_summary_writers() as (stl, sel):
         images = [tokens.tokens_to_image_array(toks) for toks in toks]
         images = (np.array(images) * 0xFF).astype(np.uint8)
@@ -39,7 +41,8 @@ def train_model(argv):
     # create the training and development dataset
     vocab_size = tokens.token_count(bitdepth=bitdepth)
     max_length = FLAGS.image_size ** 2
-    model = trax.models.TransformerLM(vocab_size, max_len=max_length)
+    #model = trax.models.TransformerLM(vocab_size, max_len=max_length)
+    model = trax.models.ReformerLM(vocab_size, max_len=max_length)
 
     imgdb = GlobDatabase(FLAGS.images, "*.jpg")
     work_list = imgdb.select("train")
@@ -84,4 +87,3 @@ def train_model(argv):
         training_loop.run(steps_per_epoch)
         backup_checkpoint(output_dir, training_loop)
         generate_sample_images(training_loop, eval_itr, model)
-

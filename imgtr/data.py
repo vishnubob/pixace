@@ -58,10 +58,10 @@ class ImageWorker(ListWorker):
     def _task_fill_image(self, toks):
         n_toks = len(toks)
         fill = tokens.special_token("<fill>")
+        pad = tokens.special_token("<pad>")
         cut = random.randint(1, n_toks - 1)
-        x = toks[:cut] + ([fill] * (n_toks - cut))
+        x = toks[:cut] + ([pad] * (n_toks - cut))
         w = ([0] * n_toks)
-        w[cut] = 1
         y = toks[:]
 
         x = np.array(x).astype(np.int32)
@@ -88,8 +88,8 @@ class ImageWorker(ListWorker):
         img = Image.open(img_path)
         work = tokens.image_to_tokens(img, size=FLAGS.image_size)
         work = list(work)
-        #work = self._auto_regress(work)
-        work = self._task_fill_image(work)
+        work = self._auto_regress(work)
+        #work = self._task_fill_image(work)
         assert len(work) == 3
         return work
 
