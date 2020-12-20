@@ -13,8 +13,12 @@ if 'FLAGS' not in locals():
     flags.DEFINE_integer('n_epochs', 10000, help=('Total number of epochs'))
     flags.DEFINE_integer('image_size', 22, help=('Edge size for square image.'))
     flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
-    flags.DEFINE_string('images', "images", help=('Path to images used for training and evalution'))
+    flags.DEFINE_string('images', "images", help=('Path to images used for training'))
     flags.DEFINE_string('checkpoint', None, help=('Path to checkpoint to load'))
+    flags.DEFINE_list('temps', [0], help=('Temperature(s) for predictions.'))
+    flags.DEFINE_list('predict_input', [], help=('List of images to prompt predictions with'))
+    flags.DEFINE_integer('cut', None, help=('Cut input at'))
+    flags.DEFINE_string('out', "collage.png", help=('Where to save the prediction image'))
 
 @flags.validator("bitdepth", "bitdepth requires three comma seperated ints")
 def _validate_bitdepth(value):

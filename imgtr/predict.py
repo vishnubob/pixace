@@ -23,9 +23,9 @@ def load_weights(chkpt):
 
 gin_config = \
 """ 
-trax.layers.SelfAttention.chunk_len = 64
 trax.layers.SelfAttention.predict_drop_len = 128
 trax.layers.SelfAttention.predict_mem_len = 1024
+trax.layers.SelfAttention.chunk_len = 1024
 LSHSelfAttention.n_hashes = 4
 """
 
@@ -43,87 +43,89 @@ def load_model(chkpt, n_tokens=None, batch_size=None, max_length=None):
     model.init_from_file(chkpt, weights_only=True, input_signature=signature)
     return model
 
-def sample_stream(batch, model, cut=None, temperature=1.0):
-    #model = tl.Accelerate(model)
-    fill_val = tokens.special_token("<fill>")
-    pad_val = tokens.special_token("<pad>")
-    (_, inp, _) = batch
-    truth = inp[:, :]
-    max_length = inp.shape[-1]
-    cut = cut or max_length // 2
+def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0):
+    out = trax.supervised.decoding.autoregressive_sample_stream(
+        model, 
+        inputs=inp,
+        batch_size=batch_size,
+        temperature=temperature
+    )
 
-    for pos in range(cut, max_length - 1):
-        inp = inp[:, :pos]
-        pad = jnp.zeros((inp.shape[0], max_length - pos)).astype(jnp.int32)
-        inp = np.concatenate((inp, pad), axis=-1)
-        output = model(inp)
-        samples = tl.logsoftmax_sample(output[:, :, :], temperature=temperature)
-        inp = jax.ops.index_update(
-            inp, 
-            jax.ops.index[:, pos], 
-            samples[:, pos]
-        )
-    yield inp
-    yield truth
+    result = []
+    for sample in out:
+        sample = sample[:, None]
+        result.append(sample)
+        if len(result) > length:
+            break
 
-def autoreg(model, max_length):
-    out = trax.supervised.decoding.autoregressive_sample(model, temperature=1.0, max_length=max_length)
-    yield out
+    result = np.concatenate(result, axis=-1)
+    if inp is not None:
+        result = np.concatenate((inp, result), axis=-1)
+    
+    return result
 
-def sample(batch, model, cut=None, templist=[0, .1, .5, 1]):
-    fill_val = tokens.special_token("<fill>")
-    pad_val = tokens.special_token("<pad>")
-    (inp, truth, _) = batch
-    max_length = inp.shape[-1]
-    if cut is not None:
-        inp = inp[:, :-cut]
-        pad = np.ones((inp.shape[0], max_length - cut)).astype(np.int32) * pad_val
-        inp = np.concatenate((inp, pad), axis=-1)
-        yield inp
+def load_images(paths):
+    size = FLAGS.image_size
+    bitdepth = FLAGS.bitdepth
+    images = [Image.open(pt) for pt in paths]
+    toks = [tokens.image_to_tokens(img, size=size, bitdepth=bitdepth) for img in images] 
+    toks = np.array(toks, dtype=np.int32)
+    return toks
 
-    model = tl.Accelerate(model)
-    output = model(inp)
-
-    for temp in templist:
-        if temp == 0:
-            samples = jnp.argmax(output, axis=-1)
-        else:
-            samples = tl.logsoftmax_sample(output, temperature=temp)
-        #samples = np.pad(samples, ((0, 0), (1, 0)))
-        #samples = samples[:, :-1]
-        yield samples
-    yield truth
+def build_collage(img_list, batch_size=None, scale=None):
+    batch_size = batch_size or FLAGS.batch_size
+    n_rows = len(img_list)
+    bitdepth = FLAGS.bitdepth
+    rows = []
+    for row in img_list:
+        row = [tokens.tokens_to_image_array(it, bitdepth=bitdepth) for it in row]
+        row = [np.pad(it, ((1, 1), (1, 1), (0, 0))) for it in row]
+        row = np.vstack(row)
+        rows.append(row)
+    tbl = np.hstack(rows)
+    img = tokens.array_to_image(tbl)
+    width = n_rows * scale
+    height = batch_size * scale
+    img = img.resize((width, height))
+    return img
 
 def predict_model(argv):
+    bitdepth = FLAGS.bitdepth
     output_dir = FLAGS.model_dir
     batch_size = FLAGS.batch_size
-    bitdepth = FLAGS.bitdepth
+    templist = list(map(float, FLAGS.temps))
     n_tokens = tokens.token_count(bitdepth=bitdepth)
     max_length = FLAGS.image_size ** 2
     checkpoint = FLAGS.checkpoint or f"{output_dir}/model.pkl.gz"
+    cut = FLAGS.cut
     scale = 256
 
-    imgdb = GlobDatabase(FLAGS.images, "*.jpg")
-    work_list = imgdb.select("val")
-    itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="")
-    batch = next(itr)
-    del itr
+    out_images = []
 
-    model = load_model(checkpoint, n_tokens, batch_size, max_length)
-    #tok_images = sample_stream(batch, model, cut=32 * 24)
-    #tok_images = sample(batch, model, cut=max_length // 2)
-    tok_images = autoreg(model, max_length)
+    image_paths = FLAGS.predict_input
+    if image_paths:
+        inp = load_images(image_paths)
+        if inp.shape[0] > batch_size:
+            inp = inp[:batch_size, :]
+        elif inp.shape[0] < batch_size:
+            batch_size = inp.shape[0]
+    else:
+        inp = None
 
-    rows = []
-    for row in tok_images:
-        row = [tokens.tokens_to_image_array(it, bitdepth=bitdepth) for it in row]
-        row = np.vstack(row)
-        rows.append(row)
+    if inp is not None and cut:
+        out_images.append(inp)
+        inp = inp[:, :cut]
+        pad = np.zeros((batch_size, max_length - cut), dtype=np.int32)
+        actual = np.concatenate((inp, pad), axis=-1)
+        out_images.append(actual)
+    else:
+        cut = 0
+    length = max_length - cut - 1
 
-    n_rows = len(rows)
-    tbl = np.hstack(rows)
-    img = tokens.array_to_image(tbl)
-    width = scale * n_rows
-    height = scale * batch_size
-    img = img.resize((width, height))
-    img.save("collage.png")
+    for temperature in templist:
+        model = load_model(checkpoint, n_tokens, batch_size, max_length)
+        row = autoreg(model, batch_size=batch_size, inp=inp, length=length, temperature=temperature)
+        out_images.append(row)
+
+    img = build_collage(out_images, batch_size=batch_size, scale=scale)
+    img.save(FLAGS.out)
