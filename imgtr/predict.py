@@ -98,7 +98,7 @@ def predict_model(argv):
     max_length = FLAGS.image_size ** 2
     checkpoint = FLAGS.checkpoint or f"{output_dir}/model.pkl.gz"
     cut = FLAGS.cut
-    scale = 256
+    scale = FLAGS.scale
 
     out_images = []
 
