@@ -1,8 +1,5 @@
 *weights*
-*.png
 tarpit
 __pycache__
 animal-faces
 .*.sw?
-app
-images
