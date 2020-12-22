@@ -1,6 +1,6 @@
 # pixace
 
-![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/ttt-collage.jpg)
+![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
 pixace is a pet project to experiment with modeling image data with [transformers](https://arxiv.org/abs/1706.03762).  Since I only have access to a single 10GB GPU, my objective was to train a network that balanced complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
 
@@ -21,7 +21,7 @@ Skipping the resize operation, here are a few examples of how this changes the c
 
 ## Image Completion
 
-![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/fill-in-example.jpg)
+![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/fill-in-example.jpg)
 
 ## Image Generation
 
