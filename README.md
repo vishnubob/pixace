@@ -1,11 +1,10 @@
 # pixace
 
+This is my pet project to experiment with modeling image data with [transformers](https://arxiv.org/abs/1706.03762).  Since I only have access to a single 10GB GPU, my objective was to train a network that balanced complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
+
 ![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
-pixace is a pet project to experiment with modeling image data with [transformers](https://arxiv.org/abs/1706.03762).  Since I only have access to a single 10GB GPU, my objective was to train a network that balanced complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
-
-
-Currently, it uses standard decoder-only transformer and reformer architectures provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each sample before using it for training.  There a few design choices that went into this process, but here is the terse version:
+It uses standard decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
 
 1. Load an image, scale it down
 2. Convert to HSV colorspace
@@ -19,10 +18,20 @@ Skipping the resize operation, here are a few examples of how this changes the c
 | -------- | ------- | ------- | ------- |
 | ![original](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_orig.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_5-4-4.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_4-3-3.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_3-2-2.jpg) |
 
+For resizing, I decded to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  With HSV 544 and 32x32 images, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
+
 ## Image Completion
+
+Using [autoregressive sampling](https://trax-ml.readthedocs.io/en/latest/trax.supervised.html#trax.supervised.decoding.autoregressive_sample_stream), we can use our trained model to complete one half of an image:
 
 ![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/fill-in-example.jpg)
 
 ## Image Generation
 
+With this same technique, we can also generate entirely new images:
+
 ![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
+
+## How do I use it?
+
+This is a work in progress, so please check back.  For the adventerous, there is a Dockerfile.  <3
