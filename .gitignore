@@ -1,5 +1,5 @@
 *.py
-model-weights
+*weights*
 *.png
 tarpit
 __pycache__
