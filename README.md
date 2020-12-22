@@ -18,7 +18,7 @@ Skipping the resize operation, here are a few examples of how this changes the c
 | -------- | ------- | ------- | ------- |
 | ![original](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_orig.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_5-4-4.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_4-3-3.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_3-2-2.jpg) |
 
-For resizing, I decded to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  With HSV 544 and 32x32 images, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
+For resizing, I decded to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  After settling on HSV 544 for the colorspace and 32x32 image size, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
 
 ## Image Completion
 
