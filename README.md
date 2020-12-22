@@ -1,8 +1,8 @@
 # pixace
 
-![zoo](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
-
 pixace is a pet project to experiment with modeling image data with [transformers](https://arxiv.org/abs/1706.03762).  Since I only have access to a single 10GB GPU, my objective was to train a network that balanced complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
+
+![zoo](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
 
 Currently, it uses standard decoder-only transformer and reformer architectures provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each sample before using it for training.  There a few design choices that went into this process, but here is the terse version:
 
