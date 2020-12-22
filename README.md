@@ -1,6 +1,6 @@
 # pixace
 
-This is my pet project to experiment with modeling image data using [transformers](https://arxiv.org/abs/1706.03762). I only have access to a single 10GB GPU, sp my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
+This is my pet project to experiment with modeling image data using [transformers](https://arxiv.org/abs/1706.03762). I only have access to a single 10GB GPU, so my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
 
 ![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
@@ -18,7 +18,7 @@ Skipping the resize operation, here are a few examples of how this changes the c
 | -------- | ------- | ------- | ------- |
 | ![original](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_orig.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_5-4-4.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_4-3-3.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_3-2-2.jpg) |
 
-For resizing, I decded to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  After settling on HSV 544 for the colorspace and 32x32 image size, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
+For resizing, I decided to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  After settling on HSV 544 for the colorspace and 32x32 image size, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
 
 ## Image Completion
 
@@ -34,4 +34,4 @@ With this same technique, we can also generate entirely new images:
 
 ## How do I use it?
 
-This is a work in progress, so please check back.  For the adventerous, there is a Dockerfile.  <3
+This is a work in progress, so please check back.  For the adventurous, there is a Dockerfile.  <3
