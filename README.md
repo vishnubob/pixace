@@ -4,7 +4,7 @@ This is my pet project to experiment with modeling image data using [transformer
 
 ![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
-It uses standard decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
+It uses decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
 
 1. Load an image, scale it down
 2. Convert to HSV colorspace
