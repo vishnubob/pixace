@@ -12,7 +12,7 @@ It uses standard decoder-only transformer and reformer architectures (language m
 4. Bitshift and pack the quantized HSV channels into a single integer
 5. Flatten the image into a 1D array
 
-Skipping the resize operation, here are a few examples of how this changes the color or an image.  "HSV 544" means the image was quantized with five bits for hue (32 values), four bits for saturation (16 values), and four bits for shade (16 values), which is a total of 8192 unique colors.
+Skipping the resize operation, here are a few examples of how this changes the color content of an image.  "HSV 544" means the image was quantized with five bits for hue (32 values), four bits for saturation (16 values), and four bits for shade (16 values), which is a total of 8192 unique colors.
 
 | Original | HSV 544 | HSV 433 | HSV 322 |
 | -------- | ------- | ------- | ------- |
