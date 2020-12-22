@@ -1,8 +1,9 @@
 # pixace
 
+![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/ttt-collage.jpg)
+
 pixace is a pet project to experiment with modeling image data with [transformers](https://arxiv.org/abs/1706.03762).  Since I only have access to a single 10GB GPU, my objective was to train a network that balanced complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
 
-![zoo](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
 
 Currently, it uses standard decoder-only transformer and reformer architectures provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each sample before using it for training.  There a few design choices that went into this process, but here is the terse version:
 
@@ -17,3 +18,11 @@ Skipping the resize operation, here are a few examples of how this changes the c
 | Original | HSV 544 | HSV 433 | HSV 322 |
 | -------- | ------- | ------- | ------- |
 | ![original](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_orig.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_5-4-4.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_4-3-3.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_3-2-2.jpg) |
+
+## Image Completion
+
+![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/fill-in-example.jpg)
+
+## Image Generation
+
+![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
