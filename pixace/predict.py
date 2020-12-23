@@ -11,7 +11,6 @@ from PIL import Image
 from . import tokens
 from . data import iter_dataset
 from . flags import FLAGS
-from . globdb import GlobDatabase
 
 def softmax(ary):
     return np.exp(ary) / sum(np.exp(ary))
@@ -36,6 +35,7 @@ def load_gin():
 def load_model(chkpt, n_tokens=None, batch_size=None, max_length=None):
     load_gin()
     print(f"Loading {chkpt} for inference")
+    # XXX: switch depending on gin
     #model = trax.models.TransformerLM(n_tokens, max_len=max_length, mode='train')
     model = trax.models.ReformerLM(n_tokens, max_len=max_length, mode='predict')
     example = np.zeros([batch_size, max_length]).astype(np.int32)
@@ -93,7 +93,7 @@ def predict_model(argv):
     bitdepth = FLAGS.bitdepth
     output_dir = FLAGS.model_dir
     batch_size = FLAGS.batch_size
-    templist = list(map(float, FLAGS.temps))
+    templist = list(map(float, FLAGS.temperature))
     n_tokens = tokens.token_count(bitdepth=bitdepth)
     max_length = FLAGS.image_size ** 2
     checkpoint = FLAGS.checkpoint or f"{output_dir}/model.pkl.gz"
@@ -102,7 +102,7 @@ def predict_model(argv):
 
     out_images = []
 
-    image_paths = FLAGS.predict_input
+    image_paths = FLAGS.prompt_images
     if image_paths:
         inp = load_images(image_paths)
         if inp.shape[0] > batch_size:

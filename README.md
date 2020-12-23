@@ -32,6 +32,108 @@ With this same technique, we can also generate entirely new images:
 
 ![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
 
-## How do I use it?
+## How do I install it?
 
-This is a work in progress, so please check back.  For the adventurous, there is a Dockerfile.  <3
+You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you are using docker, just clone this repository and build the image:
+
+```
+$ git clone https://github.com/vishnubob/pixace/
+$ cd pixace
+$ docker build -t pixace .
+```
+
+If you don't have docker, you can use pip to install the package from github onto your local system:
+
+```
+$ sudo pip install https://github.com/vishnubob/pixace/archive/main.zip
+```
+
+This package installs a single command, also called `pixace`.  If you are running this from docker, the command is implicit in your invocation of the docker image.  Running it from docker looks something like:
+
+```
+$ docker run \
+    -v $(pwd)/vol:/pixace \
+    pixace \
+    [command] [--arg1=...] [--arg2=...]
+```
+
+## Running pixace
+
+Currently, pixace provides three top level commands: download, train, and predict.  
+
+- `download` grabs compatible models from the internet (only one right now)
+- `train` will train new models from scratch, or pickup training from a previous checkpoint.
+- `predict` will create new images, either from scratch or with an image prompt.
+
+Online help is available for any command by executing:
+
+```
+pixace COMMAND --helpfull
+```
+
+## Predictions using the animal faces reformer model
+
+Before we can start to play with the model, first we need to download it.
+
+```
+$ pixace download --model_name=animalfaces
+```
+
+This will download the model weights to a directory called `model-weights`.  Now, we can make inferences.
+
+```
+$ pixace predict --model_name=animalfaces --batch_size=4 --out=predict.jpg
+```
+
+Create four generative images using the animal faces model, and save the result to `predict.jpg`.
+
+```
+$ pixace predict --model_name=animalfaces --prompt_images=image_1.jpg,image_2.jpg --out=predict.jpg --temperature=0.9,1.0,1.1 --cut=512
+```
+
+Complete two images (image_1.jpg and image_2.jpg) using three different temperatures, starting the prediction at the 512th pixel of each prompt image (one half of a 32x32 image).
+
+## How to train your own pixace model
+
+To start out, you will need a bunch of image data.  Currently, pixace is limited to modeling square images.  Feel free to use whatever aspect ratio you wish, but they will be squashed into squares regardless.  Plan on dedicating a fraction of your training set towards validation.  Validation sets are not strictly required, but if you do not provide one, pixace will use your training data for both training and validation.  Once your image data is curated, training a new model is as easy as:
+
+```
+pixace train --model_name=my_model --images=my_images/train --val_images=my_images/val
+```
+
+Training will periodically update you on its metrics, but don't expect output right away.  It will automatically save training metrics to the weights directory, so you can also monitor your training session with tensorboard.  In addition to the metrics, tensorboard will also visualize output from the model at each checkpoint.
+
+There are a variety of configuration parameters such as `--batch_size`, `--bitdepth` and `--image_size`.  See the command line usage for more details.  For example, here is the usage for train:
+
+```
+pixace train --helpfull
+<-- snip -->
+
+pixace.flags:
+  --batch_size: Batch size for training.
+    (default: '16')
+    (an integer)
+  --bitdepth: HSV bitdepths
+    (default: '5,4,4')
+    (a comma separated list)
+  --checkpoint: Path to checkpoint
+  --image_size: Edge size for square image.
+    (default: '32')
+    (an integer)
+  --images: Path to top level directory of images used for training
+    (default: 'images/train')
+  --model_dir: Top level directory for model data.
+    (default: 'model-weights')
+  --model_name: Model name.
+    (default: '1223_0308')
+  --n_epochs: Number of epochs
+    (default: '10000')
+    (an integer)
+  --steps_per_epoch: Number of steps per epochs
+    (default: '1000')
+    (an integer)
+  --val_images: Path to top level directory of images used for validation
+    (default: 'images/val')
+
+<-- snip -->
+```

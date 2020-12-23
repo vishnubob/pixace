@@ -1,5 +1,6 @@
+trax==1.3.7
+requests
 absl-py
 pillow
-trax
 matplotlib
 scikit-image

@@ -1,6 +1,8 @@
 import os
 import time
 import random
+from pathlib import Path
+from fnmatch import fnmatch
 import multiprocessing as mp
 
 from PIL import Image
@@ -11,6 +13,7 @@ from . import tokens
 from . flags import FLAGS
 
 def _shuffle_forever(item_list):
+    # XXX: use jax rng
     while True:
         item_list = list(item_list)
         random.shuffle(item_list)
@@ -55,30 +58,6 @@ class ListWorker(mp.Process):
             self._enque(batch)
 
 class ImageWorker(ListWorker):
-    def _task_fill_image(self, toks):
-        n_toks = len(toks)
-        fill = tokens.special_token("<fill>")
-        pad = tokens.special_token("<pad>")
-        cut = random.randint(2, n_toks - 1)
-        y = toks[:]
-        x = toks[:cut] + ([pad] * (n_toks - cut))
-        w = ([0] * n_toks)
-        w[cut] = 1
-
-        x = np.array(x).astype(np.int32)
-        y = np.array(y).astype(np.int32)
-        w = np.array(w).astype(np.float)
-
-        return (x, y, w)
-
-    def _task_next_token(self, toks):
-        pad = tokens.special_token("<pad>")
-        x = np.array(toks[:-1] + [pad]).astype(np.int32)
-        y = np.array(toks[1:] + [pad]).astype(np.int32)
-        w = ([1] * (len(x) - 1))  + [0]
-        w = np.array(w).astype(np.float)
-        return (x, y, w)
-
     def _auto_regress(self, work):
         work = np.array(work).astype(np.int32)
         mask = np.ones_like(work, dtype=np.float)
@@ -90,14 +69,14 @@ class ImageWorker(ListWorker):
         work = tokens.image_to_tokens(img, size=FLAGS.image_size)
         work = list(work)
         work = self._auto_regress(work)
-        #work = self._task_fill_image(work)
         assert len(work) == 3
         return work
 
 def _deque(que, qcon):
     with qcon:
         while que.empty():
-            print(f"_deque(): queue empty")
+            msg = f"[warning] queue empty, maybe increase worker count?"
+            print(msg)
             qcon.wait(1)
         item = que.get()
         qcon.notify()
@@ -118,12 +97,38 @@ def iter_dataset(work_list, batch_size=None, n_workers=4, qsize=1024, group=None
     que = mp.Queue(qsize)
     qcon = mp.Condition()
     batch_size = batch_size or FLAGS.batch_size
+    print(f"Starting {n_workers} workers within the '{group}' group")
 
     workers = []
-    print(f"Starting {n_workers} workers for group {group}")
     for n in range(n_workers):
         worker = ImageWorker(work_list, batch_size, que, qcon)
         worker.start()
         workers.append(worker)
 
+    # let workers settle
+    time.sleep(1)
+
     return _gather(que, qcon)
+
+def scan_for_images(path, patterns=None):
+    patterns = patterns or ["*.jpg", "*.jpeg", "*.png"]
+
+    _db = {}
+    match_img = lambda fn: any([fnmatch(fn.lower(), pat) for pat in patterns])
+
+    for (root, dirs, files) in os.walk(path):
+        root = Path(root)
+        for fn in files:
+            if not match_img(fn):
+                continue
+            pt = root.joinpath(fn)
+            assert pt.stem not in _db
+            _db[pt.stem] = pt
+
+    if not len(_db):
+        msg = f"No images under '{path}' were found matching '{patterns}'"
+        raise ValueError(msg)
+
+    msg = f"Found {len(_db)} images under '{path}'"
+    print(msg)
+    return _db
