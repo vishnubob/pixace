@@ -73,7 +73,7 @@ pixace COMMAND --helpfull
 
 ## Predictions using the animal faces reformer model
 
-Before we can start to play with the model, first we need to download it.
+Before we can start to play with the animal faces model, we need to download it first.
 
 ```
 # This will download the model weights to a directory called model-weights
@@ -81,6 +81,7 @@ Before we can start to play with the model, first we need to download it.
 pixace download --model_name=animalfaces
 ```
 
+We can generate entirely new images from scratch:
 
 ```
 # create four new images (no prompt) using the animal faces model
@@ -91,6 +92,8 @@ pixace predict \
     --batch_size=4 \
     --out=predict.jpg
 ```
+
+Or, we can generate new images based on a prompt image:
 
 ```
 # Use image_1.jpg and image_2.jpg as image prompts
