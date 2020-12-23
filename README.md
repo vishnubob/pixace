@@ -18,7 +18,7 @@ Skipping the resize operation, here are a few examples of how this changes the c
 | -------- | ------- | ------- | ------- |
 | ![original](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_orig.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_5-4-4.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_4-3-3.jpg) | ![tokenized](https://raw.githubusercontent.com/vishnubob/pixace/media/media/token_3-2-2.jpg) |
 
-For resizing, I decded to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  With HSV 544 and 32x32 images, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
+For resizing, I decided to use 32x32 images.  These are tiny images, only 1024 pixels, but with interpolation, they scale up incredibly well.  With HSV 544 and 32x32 images, I was able to train a transformer model with batch size 8, or a reformer model with batch size 32 on a single 10gb card.  I used the [animal faces](https://www.kaggle.com/andrewmvd/animal-faces) dataset for my first attempt.
 
 ## Image Completion
 
@@ -34,7 +34,7 @@ With this same technique, we can also generate entirely new images:
 
 ## How do I install it?
 
-You will need to install this python package either as a local package or as a docker image.  Since there is a lot of package depenedicies, I recommend using docker or a virtual environment.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you don't have docker, you can use pip to install the package from github:
+You will need to install this python package either as a local package or as a docker image.  Since there is a lot of package dependencies, I recommend using docker or a virtual environment.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you don't have docker, you can use pip to install the package from github:
 
 ```
 $ sudo pip install https://github.com/vishnubob/pixace/archive/main.zip
