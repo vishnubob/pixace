@@ -83,7 +83,8 @@ pixace download --model_name=animalfaces
 
 
 ```
-# Create four new images (no prompt) using the animal faces model, and save the result to predict.jpg
+# create four new images (no prompt) using the animal faces model
+# save the result to predict.jpg
 
 pixace predict \
     --model_name=animalfaces \
@@ -93,7 +94,7 @@ pixace predict \
 
 ```
 # Use image_1.jpg and image_2.jpg as image prompts
-# Start the prediction at the 512th pixel of each prompt image (one half of a 32x32 image)
+# Start the prediction at the 512th pixel of each prompt image
 # Generate three different sampling temperatures (0.9, 1.0, 1.1)
 # Save the result to prompt.jpg
 
