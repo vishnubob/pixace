@@ -34,12 +34,18 @@ With this same technique, we can also generate entirely new images:
 
 ## How do I install it?
 
-You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you are using docker, just clone this repository and build the image:
+You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The container is GPU enabled, but there is also a CPU only version of the dockerfile as well.  To use docker, just clone this repository and build the image:
 
 ```
+# for GPU
 git clone https://github.com/vishnubob/pixace/
 cd pixace
+
+# for GPU
 docker build -t pixace .
+
+# for CPU
+docker build -f Dockerfile.cpu -t pixace .
 ```
 
 If you don't have docker, you can use pip to install the package from github onto your local system:

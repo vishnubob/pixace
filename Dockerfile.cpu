@@ -1,0 +1,19 @@
+ARG IMAGE_NAME=tensorflow/tensorflow
+ARG IMAGE_VERSION=2.3.1
+
+FROM $IMAGE_NAME:$IMAGE_VERSION
+RUN apt-get update && \
+    apt-get dist-upgrade -y && \
+    apt-get clean
+
+COPY /requirements.txt /tmp/requirements.txt
+RUN pip3 install -U pip && \
+    pip3 install -r /tmp/requirements.txt
+
+COPY / /pixace/install
+RUN cd /pixace/install && \
+    python3 setup.py install && \
+    cd .. && \
+    rm -rf install /root/.cache/*
+WORKDIR /pixace
+ENTRYPOINT ["pixace"]
