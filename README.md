@@ -37,7 +37,6 @@ With this same technique, we can also generate entirely new images:
 You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The container is GPU enabled, but there is also a CPU only version of the dockerfile as well.  To use docker, just clone this repository and build the image:
 
 ```
-# for GPU
 git clone https://github.com/vishnubob/pixace/
 cd pixace
 
