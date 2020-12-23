@@ -102,7 +102,7 @@ def predict_model(argv):
 
     out_images = []
 
-    image_paths = FLAGS.prompt_images
+    image_paths = FLAGS.prompt_image
     if image_paths:
         inp = load_images(image_paths)
         if inp.shape[0] > batch_size:
