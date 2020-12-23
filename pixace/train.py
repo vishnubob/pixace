@@ -8,7 +8,7 @@ import trax
 from trax.supervised import training
 
 from . flags import FLAGS
-from . data import iter_dataset
+from . data import iter_dataset, scan_for_images
 from . import tokens
 
 def generate_sample_images(training_loop, batch_itr, model):

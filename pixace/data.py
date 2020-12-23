@@ -105,6 +105,9 @@ def iter_dataset(work_list, batch_size=None, n_workers=4, qsize=1024, group=None
         worker.start()
         workers.append(worker)
 
+    # let workers settle
+    time.sleep(1)
+
     return _gather(que, qcon)
 
 def scan_for_images(path, patterns=None):
@@ -119,7 +122,7 @@ def scan_for_images(path, patterns=None):
             if not match_img(fn):
                 continue
             pt = root.joinpath(fn)
-            assert pt.stem not in self._db
+            assert pt.stem not in _db
             _db[pt.stem] = pt
 
     if not len(_db):

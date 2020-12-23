@@ -3,4 +3,4 @@
 - support different colorspaces (RGB, XYZ) 
 - probe embeddings
 - support different aspect ratios
-
+- create a companion notebook

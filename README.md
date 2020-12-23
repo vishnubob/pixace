@@ -57,6 +57,20 @@ $ docker run \
     [command] [--arg1=...] [--arg2=...]
 ```
 
+## Running pixace
+
+Currently, pixace provides three top level commands: download, train, and predict.  
+
+- `download` grabs compatible models from the internet (only one right now)
+- `train` will train new models from scratch, or pickup training from a previous checkpoint.
+- `predict` will create new images, either from scratch or with an image prompt.
+
+Online help is available for any command by executing:
+
+```
+pixace COMMAND --helpfull
+```
+
 ## Predictions using the animal faces reformer model
 
 Before we can start to play with the model, first we need to download it.
@@ -81,4 +95,18 @@ Complete two images (image_1.jpg and image_2.jpg) using three different temperat
 
 ## How to train your own pixace model
 
-Coming soon!
+To start out, you will need a bunch of image data.  Currently, pixace is limited to modeling square images.  Feel free to use whatever aspect ratio you wish, but they will be squashed into squares regardless.  Plan on dedicating a fraction of your training set towards validation.  Validation sets are not strictly required, but if you do not provide one, pixace will use your training data for both training and validation.  Once your image data is curated, training a new model is as easy as:
+
+```
+pixace train --model_name=my_model --images=my_images/train --val_images=my_images/val
+```
+
+Training will periodically update you on its metrics, but don't expect output right away.  It will automatically save training metrics to the weights directory, so you can also monitor your training session with tensorboard.  In addition to the metrics, tensorboard will also visualize output from the model at each checkpoint.
+
+There are a variety of configuration parameters such as `--batch_size`, `--bitdepth` and `--image_size`.  See the command line usage for more details:
+
+```
+pixace train --helpfull
+<-- snip -->
+
+```
