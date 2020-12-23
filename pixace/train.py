@@ -8,10 +8,8 @@ import trax
 from trax.supervised import training
 
 from . flags import FLAGS
-from . globdb import GlobDatabase
 from . data import iter_dataset
 from . import tokens
-from . layers import WeightedCategoryAccuracy, WeightedCategoryCrossEntropy
 
 def generate_sample_images(training_loop, batch_itr, model):
     inp = next(batch_itr)[0]
@@ -37,18 +35,24 @@ def train_model(argv):
     steps_per_epoch = FLAGS.steps_per_epoch
     bitdepth = FLAGS.bitdepth
     n_epochs = FLAGS.n_epochs
+    path_images = FLAGS.images
+    path_images_val = FLAGS.val_images
 
     # create the training and development dataset
     vocab_size = tokens.token_count(bitdepth=bitdepth)
     max_length = FLAGS.image_size ** 2
+    # XXX: switch model type on flags
     #model = trax.models.TransformerLM(vocab_size, max_len=max_length)
     model = trax.models.ReformerLM(vocab_size, max_len=max_length)
 
-    imgdb = GlobDatabase(FLAGS.images, "*.jpg")
-    work_list = imgdb.select("train")
-    train_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="train")
-    work_list = imgdb.select("val")
-    eval_itr = iter_dataset(work_list, batch_size=FLAGS.batch_size, group="val")
+    if not (path_images_val and os.path.exists(path_images_val)):
+        msg = "Warning: no validation path provided, using training images as a substitute"
+        path_images_val = path_images
+
+    training_image_list = scan_for_images(path_images)
+    validation_image_list = scan_for_images(path_images_val)
+    train_itr = iter_dataset(training_image_list, batch_size=FLAGS.batch_size, group="train")
+    eval_itr = iter_dataset(validation_image_list, batch_size=FLAGS.batch_size, group="val")
 
     opt = trax.optimizers.Adam()
     loss = trax.layers.CrossEntropyLoss()
