@@ -34,18 +34,18 @@ With this same technique, we can also generate entirely new images:
 
 ## How do I install it?
 
-You will need to install this python package either as a local package or as a docker image.  Since there is a lot of package dependencies, I recommend using docker or a virtual environment.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you don't have docker, you can use pip to install the package from github:
-
-```
-$ sudo pip install https://github.com/vishnubob/pixace/archive/main.zip
-```
-
-If you are using docker, clone this repository and build the image:
+You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you are using docker, just clone this repository and build the image:
 
 ```
 $ git clone https://github.com/vishnubob/pixace/
 $ cd pixace
 $ docker build -t pixace .
+```
+
+If you don't have docker, you can use pip to install the package from github onto your local system:
+
+```
+$ sudo pip install https://github.com/vishnubob/pixace/archive/main.zip
 ```
 
 This package installs a single command, also called `pixace`.  If you are running this from docker, the command is implicit in your invocation of the docker image.  Running it from docker looks something like:
@@ -57,7 +57,7 @@ $ docker run \
     [command] [--arg1=...] [--arg2=...]
 ```
 
-## Quickstart with Predictions using the animal faces reformer model
+## Predictions using the animal faces reformer model
 
 Before we can start to play with the model, first we need to download it.
 
@@ -65,7 +65,7 @@ Before we can start to play with the model, first we need to download it.
 $ pixace download --model_name=animalfaces
 ```
 
-This will download the animal faces model weights to a directory called `model-weights`.  Now, we can make inferences.
+This will download the model weights to a directory called `model-weights`.  Now, we can make inferences.
 
 ```
 $ pixace predict --model_name=animalfaces --batch_size=4 --out=predict.jpg
