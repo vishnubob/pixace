@@ -76,34 +76,38 @@ pixace COMMAND --helpfull
 Before we can start to play with the model, first we need to download it.
 
 ```
+# This will download the model weights to a directory called model-weights
+
 pixace download --model_name=animalfaces
 ```
 
-This will download the model weights to a directory called `model-weights`.  Now, we can make inferences.
 
 ```
+# Create four new images (no prompt) using the animal faces model, and save the result to predict.jpg
+
 pixace predict \
     --model_name=animalfaces \
     --batch_size=4 \
     --out=predict.jpg
 ```
 
-Create four generative images using the animal faces model, and save the result to `predict.jpg`.
-
 ```
-$ pixace predict \
+# Use image_1.jpg and image_2.jpg as image prompts
+# Start the prediction at the 512th pixel of each prompt image (one half of a 32x32 image)
+# Generate three different sampling temperatures (0.9, 1.0, 1.1)
+# Save the result to prompt.jpg
+
+pixace predict \
     --model_name=animalfaces \
     --prompt_images=image_1.jpg,image_2.jpg \
-    --out=predict.jpg \
+    --cut=512 \
     --temperature=0.9,1.0,1.1 \
-    --cut=512
+    --out=prompt.jpg
 ```
-
-Complete two images (image_1.jpg and image_2.jpg) using three different temperatures, starting the prediction at the 512th pixel of each prompt image (one half of a 32x32 image).
 
 ## How to train your own pixace model
 
-To start out, you will need a bunch of image data.  Currently, pixace is limited to modeling square images.  Feel free to use whatever aspect ratio you wish, but they will be squashed into squares regardless.  Plan on dedicating a fraction of your training set towards validation.  Validation sets are not strictly required, but if you do not provide one, pixace will use your training data for both training and validation.  Once your image data is curated, training a new model is as easy as:
+To start out, you will need to gather image data.  Currently, pixace is limited to modeling square images.  Feel free to use whatever aspect ratio you wish, but they will be squashed into squares regardless.  Plan on dedicating a fraction of your training set towards validation.  Validation sets are not strictly required, but if you do not provide one, pixace will use your training data for both training and validation.  Once your image data is curated, training a new model is as easy as:
 
 ```
 pixace train \
@@ -112,7 +116,7 @@ pixace train \
     --val_images=my_images/val
 ```
 
-Training will periodically update you on its metrics, but don't expect output right away.  It will automatically save training metrics to the weights directory, so you can also monitor your training session with tensorboard.  In addition to the metrics, tensorboard will also visualize output from the model at each checkpoint.
+Training will periodically update you on its metrics, but don't expect output right away.  It will automatically save training metrics to the weights directory, so you can also monitor your training session with tensorboard.  In addition to metrics, tensorboard will also visualize output from the model at each checkpoint.
 
 There are a variety of configuration parameters such as `--batch_size`, `--bitdepth` and `--image_size`.  See the command line usage for more details.  For example, here is the usage for train:
 
