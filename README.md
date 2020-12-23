@@ -32,6 +32,53 @@ With this same technique, we can also generate entirely new images:
 
 ![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
 
-## How do I use it?
+## How do I install it?
 
-This is a work in progress, so please check back.  For the adventerous, there is a Dockerfile.  <3
+You will need to install this python package either as a local package or as a docker image.  Since there is a lot of package depenedicies, I recommend using docker or a virtual environment.  The docker image is GPU enabled, but the image will also work if no GPU is available.  If you don't have docker, you can use pip to install the package from github:
+
+```
+$ sudo pip install https://github.com/vishnubob/pixace/archive/main.zip
+```
+
+If you are using docker, clone this repository and build the image:
+
+```
+$ git clone https://github.com/vishnubob/pixace/
+$ cd pixace
+$ docker build -t pixace .
+```
+
+This package installs a single command, also called `pixace`.  If you are running this from docker, the command is implicit in your invocation of the docker image.  Running it from docker looks something like:
+
+```
+$ docker run \
+    -v $(pwd)/vol:/pixace \
+    pixace \
+    [command] [--arg1=...] [--arg2=...]
+```
+
+## Quickstart with Predictions using the animal faces reformer model
+
+Before we can start to play with the model, first we need to download it.
+
+```
+$ pixace download --model_name=animalfaces
+```
+
+This will download the animal faces model weights to a directory called `model-weights`.  Now, we can make inferences.
+
+```
+$ pixace predict --model_name=animalfaces --batch_size=4 --out=predict.jpg
+```
+
+Create four generative images using the animal faces model, and save the result to `predict.jpg`.
+
+```
+$ pixace predict --model_name=animalfaces --prompt_images=image_1.jpg,image_2.jpg --out=predict.jpg --temperature=0.9,1.0,1.1 --cut=512
+```
+
+Complete two images (image_1.jpg and image_2.jpg) using three different temperatures, starting the prediction at the 512th pixel of each prompt image (one half of a 32x32 image).
+
+## How to train your own pixace model
+
+Coming soon!
