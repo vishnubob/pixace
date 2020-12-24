@@ -16,4 +16,5 @@ RUN cd /pixace/install && \
     cd .. && \
     rm -rf install /root/.cache/*
 WORKDIR /pixace
+ENV TF_CPP_MIN_LOG_LEVEL=3
 ENTRYPOINT ["pixace"]
