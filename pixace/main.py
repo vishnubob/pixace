@@ -34,7 +34,6 @@ def wrap_command(command, **kw):
     argv = [sys.argv[0], command]
     argv += [f"--{key}={val}" for (key, val) in kw.items()]
     sys.argv = argv
-    print(sys.argv)
     return cli()
 
 def train(**kw):
