@@ -1,14 +1,18 @@
 import os
+import time
 import shutil
 
 import numpy as np
 from absl import logging
 
 import trax
+import trax.layers as tl
 from trax.supervised import training
 
 from . data import iter_dataset, scan_for_images
 from . import tokens
+
+_get_ts = lambda: time.strftime("%m%d_%H%M")
 
 def generate_sample_images(training_loop, batch_itr, model, image_size=None, bitdepth=None):
     inp = next(batch_itr)[0]
@@ -30,7 +34,7 @@ def backup_checkpoint(output_dir, training_loop):
 
 class Trainer(object):
     def __init__(self, model_name=None, model_type="reformer", weights_dir="model-weights", image_size=32, bitdepth=(5,4,4)):
-        self.model_name = model_name
+        self.model_name = model_name or _get_ts()
         self.model_type = model_type
         self.weights_dir = weights_dir
         self.bitdepth = bitdepth
@@ -50,6 +54,7 @@ class Trainer(object):
 
         if val_images is None:
             msg = "Warning: no validation path provided, using training images as a substitute"
+            print(msg)
             val_images = images
 
         val_images = scan_for_images(val_images)
@@ -74,16 +79,21 @@ class Trainer(object):
             raise ValueError(msg)
         return model
 
-    def train(self, batch_size=None, steps_per_epoch=1000, steps_per_eval=None, n_epochs=100, images="images", val_images=None):
-        opt = trax.optimizers.Adam()
-        loss = trax.layers.CrossEntropyLoss()
+    def train(self, batch_size=8, steps_per_epoch=100, steps_per_eval=None, n_epochs=10, images="images", val_images=None):
+        output_dir = os.path.join(self.weights_dir, self.model_name)
         lr = trax.lr.multifactor()
+        loss = tl.WeightedCategoryCrossEntropy()
+        eval_metrics = [
+            tl.WeightedCategoryCrossEntropy(), 
+            tl.WeightedCategoryAccuracy(),
+            tl.MaskedSequenceAccuracy(),
+        ]
+        opt = trax.optimizers.Adam()
         model = self.init_model()
         if steps_per_eval is None:
             steps_per_eval = max(1, steps_per_epoch // 10)
 
         (train_itr, eval_itr) = self.init_data(batch_size=batch_size, images=images, val_images=val_images)
-        batch = next(train_itr)
 
         train_task = training.TrainTask(
             labeled_data=train_itr,
@@ -95,11 +105,10 @@ class Trainer(object):
 
         eval_task = training.EvalTask(
             labeled_data=eval_itr,
-            metrics=[trax.layers.CrossEntropyLoss(), trax.layers.SequenceAccuracy()],
+            metrics=eval_metrics,
             n_eval_batches=steps_per_eval
         )
 
-        output_dir = os.path.join(self.weights_dir, self.model_name)
         training_loop = training.Loop(
             model,
             train_task,

@@ -88,6 +88,7 @@ def build_collage(img_list, batch_size=None, scale=None, bitdepth=None):
 
 class Inference(object):
     def __init__(self, model_name=None, model_type=None, weights_dir=None, checkpoint=None, image_size=None, bitdepth=None):
+        assert model_name
         self.model_name = model_name
         # XXX: migrate most of these params to gin
         self.model_type = model_type
@@ -121,6 +122,7 @@ class Inference(object):
         self.model.weights = weights
 
     def predict(self, batch_size=None, prompts=None, cut=None, temperature=1, scale=256):
+        batch_size = batch_size or 1
         out_images = []
 
         if prompts:

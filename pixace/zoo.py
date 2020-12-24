@@ -88,3 +88,4 @@ class ModelZoo(object):
         from . flags import FLAGS
         zoo = cls(weights_dir=FLAGS.weights_dir)
         zoo.download(model_name=FLAGS.model_name, checkpoint=FLAGS.checkpoint)
+

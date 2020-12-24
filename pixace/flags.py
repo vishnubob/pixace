@@ -3,10 +3,8 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
-_get_ts = lambda: time.strftime("%m%d_%H%M")
-
 def common_flags():
-    flags.DEFINE_string('model_name', _get_ts(), help=('Model name.'))
+    flags.DEFINE_string('model_name', None, help=('Model name.'))
     flags.DEFINE_string('model_type', "reformer", help=('Model type (transformer, reformer)'))
     flags.DEFINE_string('weights_dir', 'model-weights', help=('Top level directory for model data.'))
     flags.DEFINE_integer('batch_size', 16, help=('Batch size for training.'))

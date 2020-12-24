@@ -1,11 +1,39 @@
-def train(**kw):
-    from . main import wrap_command
-    return wrap_command("train", **kw)
+def download_model(model_name=None, checkpoint="default", weights_dir="model-weights"):
+    from . zoo import ModelZoo
+    zoo = ModelZoo(weights_dir=weights_dir)
+    return zoo.download(model_name=model_name, checkpoint=checkpoint)
 
-def predict(**kw):
-    from . main import wrap_command
-    return wrap_command("predict", **kw)
+def get_trainer(
+        model_name=None,
+        model_type="reformer",
+        weights_dir="model-weights",
+        image_size=32,
+        bitdepth=(5,4,4),
+    ):
 
-def download(**kw):
-    from . main import wrap_command
-    return wrap_command("download", **kw)
+    from . train import Trainer
+    return Trainer(
+        model_name=model_name,
+        model_type=model_type,
+        weights_dir=weights_dir,
+        image_size=image_size,
+        bitdepth=bitdepth,
+    )
+
+def get_predictor(
+        model_name=None,
+        model_type="reformer",
+        weights_dir="model-weights",
+        checkpoint=None,
+        image_size=32,
+        bitdepth=(5,4,4)
+    ):
+
+    from . inference import Inference
+    return Inference(
+        model_name=model_name,
+        model_type=model_type,
+        weights_dir=weights_dir,
+        image_size=image_size,
+        bitdepth=bitdepth,
+    )
