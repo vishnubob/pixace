@@ -127,10 +127,7 @@ class Inference(object):
 
         if prompts:
             inp = load_images(prompts, size=self.image_size, bitdepth=self.bitdepth)
-            if inp.shape[0] > batch_size:
-                inp = inp[:batch_size, :]
-            elif inp.shape[0] < batch_size:
-                batch_size = inp.shape[0]
+            batch_size = inp.shape[0]
 
             if cut is None:
                 cut = self.max_length // 2
