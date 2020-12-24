@@ -147,3 +147,4 @@ def predict_model(argv):
 
     img = build_collage(out_images, batch_size=batch_size, scale=scale)
     img.save(out)
+    return img
