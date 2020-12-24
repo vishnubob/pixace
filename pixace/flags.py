@@ -31,7 +31,7 @@ def train_flags():
 
 def predict_flags():
     common_flags()
-    flags.DEFINE_list('prompt_image', [], help=('one or more prompt images, optional'))
+    flags.DEFINE_list('prompt', [], help=('one or more prompt images, optional'))
     flags.DEFINE_integer('cut', None, help=('Cut input image at pixel #'))
     # XXX: normalize scale around 1 or 100
     flags.DEFINE_integer('scale', 256, help=('Scale output'))

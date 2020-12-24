@@ -108,7 +108,7 @@ Or, we can generate new images based on a prompt image:
 
 pixace predict \
     --model_name=animalfaces \
-    --prompt_image=image_1.jpg,image_2.jpg \
+    --prompt=image_1.jpg,image_2.jpg \
     --cut=512 \
     --temperature=0.9,1.0,1.1 \
     --out=prompt.jpg

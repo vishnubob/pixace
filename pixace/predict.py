@@ -1,3 +1,4 @@
+import os
 import pickle
 import gzip
 import trax
@@ -11,6 +12,7 @@ from PIL import Image
 from . import tokens
 from . data import iter_dataset
 from . flags import FLAGS
+from . utils import download_image_from_web
 
 def softmax(ary):
     return np.exp(ary) / sum(np.exp(ary))
@@ -67,7 +69,19 @@ def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0):
 def load_images(paths):
     size = FLAGS.image_size
     bitdepth = FLAGS.bitdepth
-    images = [Image.open(pt) for pt in paths]
+    images = []
+    for path in paths:
+        if not os.path.exists(path):
+            if path.lower().startswith("http"):
+                # maybe a URL?
+                img = download_image_from_web(path)
+            else:
+                msg = f"'{path}' does not exist"
+                raise ValueError(msg)
+        else:
+            img = Image.open(path)
+        images.append(img)
+
     toks = [tokens.image_to_tokens(img, size=size, bitdepth=bitdepth) for img in images] 
     toks = np.array(toks, dtype=np.int32)
     return toks
@@ -102,7 +116,7 @@ def predict_model(argv):
 
     out_images = []
 
-    image_paths = FLAGS.prompt_image
+    image_paths = FLAGS.prompt
     if image_paths:
         inp = load_images(image_paths)
         if inp.shape[0] > batch_size:
@@ -112,7 +126,9 @@ def predict_model(argv):
     else:
         inp = None
 
-    if inp is not None and cut:
+    if inp is not None:
+        if cut is None:
+            cut = max_length // 2
         out_images.append(inp)
         inp = inp[:, :cut]
         pad = np.zeros((batch_size, max_length - cut), dtype=np.int32)
@@ -120,6 +136,7 @@ def predict_model(argv):
         out_images.append(actual)
     else:
         cut = 0
+
     length = max_length - cut - 1
 
     for temperature in templist:
