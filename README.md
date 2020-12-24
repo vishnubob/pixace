@@ -2,9 +2,11 @@
 
 This is my pet project to experiment with modeling image data using [transformers](https://arxiv.org/abs/1706.03762). I only have access to a single 10GB GPU, so my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
 
+## [ Check out the [colab notebook](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb) ]
+
 ![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
-It uses decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
+Pixace uses decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
 
 1. Load an image, scale it down
 2. Convert to HSV colorspace
@@ -33,6 +35,9 @@ With this same technique, we can also generate entirely new images:
 ![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
 
 ## How do I install it?
+
+### If you don't want to go through the hassle of installing pixace yourself, consider checking out the [colab notebook](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb).
+
 
 You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The container is GPU enabled, but there is also a CPU only version of the dockerfile as well.  To use docker, just clone this repository and build the image:
 
