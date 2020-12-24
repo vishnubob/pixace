@@ -98,20 +98,32 @@ pixace predict \
     --out=predict.jpg
 ```
 
-Or, we can generate new images based on a prompt image:
+We can also use an image as a prompt for the prediction.  This will splice together some number of pixels from the original image, and the remaining pixels from the model.  By default, it will cut the picture in half, but you can adjust this with the `--cut` parameter.  Prompt images can either be local file or a URL to an image.
 
 ```
-# Use image_1.jpg and image_2.jpg as image prompts
+# Use two images from the web as image prompts
+# Save the result to prompt.jpg
+
+pixace predict \
+    --model_name=animalfaces \
+    --out=predict.jpg 
+    --prompt=https://github.com/vishnubob/pixace/raw/main/examples/prompts/prompt_1.jpg,https://github.com/vishnubob/pixace/raw/main/examples/prompts/prompt_2.jpg
+```
+
+There is an additional parameter, `--temperature` that lets you adjust how individual pixel colors are called.  Lower temperatures will be more conserative, while higher temperatures are more dynamic.  This defaults to `1.0`, but you can set your own, or even multiple values.  This makes it easy to create multple instances of the same input at different temperatures.
+
+```
+# Use two images from the web as image prompts
 # Start the prediction at the 512th pixel of each prompt image
 # Generate three different sampling temperatures (0.9, 1.0, 1.1)
 # Save the result to prompt.jpg
 
 pixace predict \
     --model_name=animalfaces \
-    --prompt=image_1.jpg,image_2.jpg \
     --cut=512 \
     --temperature=0.9,1.0,1.1 \
-    --out=prompt.jpg
+    --out=prompt.jpg \
+    --prompt=https://github.com/vishnubob/pixace/raw/main/examples/prompts/prompt_1.jpg,https://github.com/vishnubob/pixace/raw/main/examples/prompts/prompt_2.jpg
 ```
 
 ## How to train your own pixace model
