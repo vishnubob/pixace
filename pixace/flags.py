@@ -6,13 +6,13 @@ FLAGS = flags.FLAGS
 _get_ts = lambda: time.strftime("%m%d_%H%M")
 
 def common_flags():
-    flags.DEFINE_string('model_dir', 'model-weights', help=('Top level directory for model data.'))
     flags.DEFINE_string('model_name', _get_ts(), help=('Model name.'))
+    flags.DEFINE_string('model_type', "reformer", help=('Model type (transformer, reformer)'))
+    flags.DEFINE_string('weights_dir', 'model-weights', help=('Top level directory for model data.'))
     flags.DEFINE_integer('batch_size', 16, help=('Batch size for training.'))
     # XXX: allow other aspect ratios
     flags.DEFINE_integer('image_size', 32, help=('Edge size for square image.'))
     flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
-    flags.DEFINE_string('checkpoint', None, help=('Path to checkpoint'))
 
     @flags.validator("bitdepth", "bitdepth requires three comma seperated ints")
     def _validate_bitdepth(value):
@@ -27,12 +27,14 @@ def common_flags():
 def train_flags():
     common_flags()
     flags.DEFINE_integer('steps_per_epoch', 1000, help=('Number of steps per epochs'))
-    flags.DEFINE_integer('n_epochs', 10000, help=('Number of epochs'))
-    flags.DEFINE_string('images', "images/train", help=('Path to top level directory of images used for training'))
-    flags.DEFINE_string('val_images', "images/val", help=('Path to top level directory of images used for validation'))
+    flags.DEFINE_integer('steps_per_eval', None, help=('Number of steps per eval'))
+    flags.DEFINE_integer('n_epochs', 100, help=('Number of epochs'))
+    flags.DEFINE_string('images', "images", help=('Path to top level directory of images used for training'))
+    flags.DEFINE_string('val_images', None, help=('Path to top level directory of images used for validation'))
 
 def predict_flags():
     common_flags()
+    flags.DEFINE_string('checkpoint', None, help=('Path to checkpoint'))
     flags.DEFINE_list('prompt', [], help=('one or more prompt images, optional'))
     flags.DEFINE_integer('cut', None, help=('Cut input image at pixel #'))
     # XXX: normalize scale around 1 or 100
@@ -42,8 +44,8 @@ def predict_flags():
 
 def download_flags():
     flags.DEFINE_string('model_name', None, help=('Name of the model'))
+    flags.DEFINE_string('weights_dir', 'model-weights', help=('Top level directory for model data.'))
     flags.DEFINE_string('checkpoint', "default", help=('Name of the checkpoint'))
-    flags.DEFINE_string('model_dir', 'model-weights', help=('Top level directory for model data.'))
 
 def load_flags(command, argv=None):
     if command == "train":

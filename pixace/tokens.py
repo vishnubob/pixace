@@ -2,7 +2,6 @@ import os
 from PIL import Image
 import numpy as np
 from skimage.color import rgb2hsv, hsv2rgb
-from . flags import FLAGS
 
 SpecialSymbols = (
     '<pad>',
@@ -11,7 +10,6 @@ SpecialSymbols = (
 n_reserved = len(SpecialSymbols)
 
 def token_count(bitdepth=None):
-    bitdepth = bitdepth or FLAGS.bitdepth
     return (2 ** sum(bitdepth)) + len(SpecialSymbols)
 
 def special_token(symbol, bitdepth=None):
@@ -69,8 +67,7 @@ def array_to_image(img_array, dnr=(0, 1)):
     o_img = Image.fromarray(img_array)
     return o_img
 
-def image_to_tokens(img, size=16, bitdepth=None):
-    bitdepth = bitdepth or FLAGS.bitdepth
+def image_to_tokens(img, size=None, bitdepth=None):
     img = img.resize((size, size))
     img = image_to_array(img)
     img = rgb2hsv(img)
@@ -78,14 +75,11 @@ def image_to_tokens(img, size=16, bitdepth=None):
     return img
 
 def tokens_to_image_array(img, bitdepth=None):
-    bitdepth = bitdepth or FLAGS.bitdepth
     img = unpack(img, bitdepth=bitdepth)
     img = hsv2rgb(img)
     return img
 
 def tokens_to_image(img, bitdepth=None):
-    bitdepth = bitdepth or FLAGS.bitdepth
     i_ary = tokens_to_image_array(img, bitdepth=bitdepth)
     img = array_to_image(i_ary)
     return img
-

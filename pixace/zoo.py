@@ -50,8 +50,8 @@ def is_gdrive_model(model_name=None):
 def is_gdrive_checkpoint(model_name=None, checkpoint="default"):
     return is_gdrive_model(model_name) and (checkpoint in ModelDirectory[model_name])
 
-def get_checkpoint(model_name=None, checkpoint="default", model_dir=None):
-    model_dir = model_dir or "model-weights"
+def get_checkpoint(model_name=None, checkpoint="default", weights_dir=None):
+    weights_dir = weights_dir or "model-weights"
 
     if not is_gdrive_model(model_name):
         msg = f"{model_name} is not in the model list {str(list(ModelDirectory.keys()))}"
@@ -63,7 +63,7 @@ def get_checkpoint(model_name=None, checkpoint="default", model_dir=None):
 
     gid = ModelDirectory[model_name][checkpoint]
 
-    root = os.path.join(model_dir, model_name)
+    root = os.path.join(weights_dir, model_name)
     os.makedirs(root, exist_ok=True)
     if checkpoint == "default":
         fn = f"model.pkl.gz"
@@ -75,9 +75,16 @@ def get_checkpoint(model_name=None, checkpoint="default", model_dir=None):
     download_file_from_google_drive(gid, fn)
     return fn
 
-def download_model(argv):
-    from . flags import FLAGS
-    model_name = FLAGS.model_name
-    checkpoint = FLAGS.checkpoint
-    model_dir = FLAGS.model_dir
-    filename = get_checkpoint(model_name, checkpoint, model_dir)
+class ModelZoo(object):
+    def __init__(self, weights_dir="model-weights"):
+        self.weights_dir = weights_dir
+
+    def download(self, model_name=None, checkpoint="default"):
+        checkpoint_path = get_checkpoint(model_name, checkpoint, self.weights_dir)
+        return checkpoint_path
+
+    @classmethod
+    def _absl_main(cls, argv):
+        from . flags import FLAGS
+        zoo = cls(weights_dir=FLAGS.weights_dir)
+        zoo.download(model_name=FLAGS.model_name, checkpoint=FLAGS.checkpoint)

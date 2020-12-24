@@ -8,10 +8,10 @@ from jax import numpy as jnp
 from trax import layers as tl
 from absl import logging
 from PIL import Image
+import gin
 
 from . import tokens
 from . data import iter_dataset
-from . flags import FLAGS
 from . utils import download_image_from_web
 
 def softmax(ary):
@@ -30,20 +30,7 @@ trax.layers.SelfAttention.chunk_len = 1024
 LSHSelfAttention.n_hashes = 4
 """
 
-def load_gin():
-    import gin
-    gin.parse_config(gin_config)
-
-def load_model(chkpt, n_tokens=None, batch_size=None, max_length=None):
-    load_gin()
-    print(f"Loading {chkpt} for inference")
-    # XXX: switch depending on gin
-    #model = trax.models.TransformerLM(n_tokens, max_len=max_length, mode='train')
-    model = trax.models.ReformerLM(n_tokens, max_len=max_length, mode='predict')
-    example = np.zeros([batch_size, max_length]).astype(np.int32)
-    signature = trax.shapes.signature(example)
-    model.init_from_file(chkpt, weights_only=True, input_signature=signature)
-    return model
+gin.parse_config(gin_config)
 
 def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0):
     out = trax.supervised.decoding.autoregressive_sample_stream(
@@ -66,9 +53,7 @@ def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0):
     
     return result
 
-def load_images(paths):
-    size = FLAGS.image_size
-    bitdepth = FLAGS.bitdepth
+def load_images(paths, size=None, bitdepth=None):
     images = []
     for path in paths:
         if not os.path.exists(path):
@@ -86,10 +71,8 @@ def load_images(paths):
     toks = np.array(toks, dtype=np.int32)
     return toks
 
-def build_collage(img_list, batch_size=None, scale=None):
-    batch_size = batch_size or FLAGS.batch_size
+def build_collage(img_list, batch_size=None, scale=None, bitdepth=None):
     n_rows = len(img_list)
-    bitdepth = FLAGS.bitdepth
     rows = []
     for row in img_list:
         row = [tokens.tokens_to_image_array(it, bitdepth=bitdepth) for it in row]
@@ -103,48 +86,94 @@ def build_collage(img_list, batch_size=None, scale=None):
     img = img.resize((width, height))
     return img
 
-def predict_model(argv):
-    bitdepth = FLAGS.bitdepth
-    output_dir = FLAGS.model_dir
-    batch_size = FLAGS.batch_size
-    templist = list(map(float, FLAGS.temperature))
-    n_tokens = tokens.token_count(bitdepth=bitdepth)
-    max_length = FLAGS.image_size ** 2
-    checkpoint = FLAGS.checkpoint or f"{output_dir}/model.pkl.gz"
-    cut = FLAGS.cut
-    scale = FLAGS.scale
-    out = FLAGS.out
+class Inference(object):
+    def __init__(self, model_name=None, model_type=None, weights_dir=None, checkpoint=None, image_size=None, bitdepth=None):
+        self.model_name = model_name
+        # XXX: migrate most of these params to gin
+        self.model_type = model_type
+        self.weights_dir = weights_dir
+        self.bitdepth = bitdepth
+        self.image_size = image_size
+        self.max_length = self.image_size ** 2
+        self.n_tokens = tokens.token_count(bitdepth=self.bitdepth)
+        if checkpoint is None:
+            checkpoint = os.path.join(self.weights_dir, self.model_name, "model.pkl.gz")
+        self.model = self.load_model(checkpoint)
 
-    out_images = []
+    def load_model(self, checkpoint=None):
+        msg = f"Loading {self.model_type} model from '{checkpoint}'"
+        print(msg)
+        if self.model_type == "transformer":
+            model = trax.models.TransformerLM(self.n_tokens, max_len=self.max_length, mode='predict')
+        elif self.model_type == "reformer":
+            model = trax.models.ReformerLM(self.n_tokens, max_len=self.max_length, mode='predict')
+        else:
+            msg = f"Unknown model type '{self.model_type}'"
+            raise ValueError(msg)
+        model.init_from_file(checkpoint, weights_only=True)
+        return model
 
-    image_paths = FLAGS.prompt
-    if image_paths:
-        inp = load_images(image_paths)
-        if inp.shape[0] > batch_size:
-            inp = inp[:batch_size, :]
-        elif inp.shape[0] < batch_size:
-            batch_size = inp.shape[0]
-    else:
-        inp = None
+    def reset_model(self, batch_size=None):
+        weights = self.model.weights
+        example = np.zeros([batch_size, self.max_length]).astype(np.int32)
+        signature = trax.shapes.signature(example)
+        self.model.init(signature)
+        self.model.weights = weights
 
-    if inp is not None:
-        if cut is None:
-            cut = max_length // 2
-        out_images.append(inp)
-        inp = inp[:, :cut]
-        pad = np.zeros((batch_size, max_length - cut), dtype=np.int32)
-        actual = np.concatenate((inp, pad), axis=-1)
-        out_images.append(actual)
-    else:
-        cut = 0
+    def predict(self, batch_size=None, prompts=None, cut=None, temperature=1, scale=256):
+        out_images = []
 
-    length = max_length - cut - 1
+        if prompts:
+            inp = load_images(prompts, size=self.image_size, bitdepth=self.bitdepth)
+            if inp.shape[0] > batch_size:
+                inp = inp[:batch_size, :]
+            elif inp.shape[0] < batch_size:
+                batch_size = inp.shape[0]
 
-    for temperature in templist:
-        model = load_model(checkpoint, n_tokens, batch_size, max_length)
-        row = autoreg(model, batch_size=batch_size, inp=inp, length=length, temperature=temperature)
-        out_images.append(row)
+            if cut is None:
+                cut = self.max_length // 2
+            out_images.append(inp)
+            inp = inp[:, :cut]
+            pad = np.zeros((batch_size, self.max_length - cut), dtype=np.int32)
+            actual = np.concatenate((inp, pad), axis=-1)
+            out_images.append(actual)
+        else:
+            inp = None
+            cut = 0
 
-    img = build_collage(out_images, batch_size=batch_size, scale=scale)
-    img.save(out)
-    return img
+        length = self.max_length - cut - 1
+
+        if isinstance(temperature, (int, float)):
+            temperature = [temperature] 
+
+        for temp in temperature:
+            temp = float(temp)
+            self.reset_model(batch_size=batch_size)
+            row = autoreg(self.model, batch_size=batch_size, inp=inp, length=length, temperature=temp)
+            out_images.append(row)
+
+        img = build_collage(out_images, batch_size=batch_size, scale=scale, bitdepth=self.bitdepth)
+        return img
+
+    @classmethod
+    def _absl_main(cls, argv):
+        from . flags import FLAGS
+
+        instance = cls(
+            model_name=FLAGS.model_name,
+            model_type=FLAGS.model_type,
+            weights_dir=FLAGS.weights_dir,
+            checkpoint=FLAGS.checkpoint,
+            image_size=FLAGS.image_size,
+            bitdepth=FLAGS.bitdepth
+        )
+
+        img = instance.predict(
+            batch_size=FLAGS.batch_size,
+            temperature=FLAGS.temperature,
+            prompts=FLAGS.prompt,
+            cut=FLAGS.cut,
+            scale=FLAGS.scale
+        )
+
+        img.save(FLAGS.out)
