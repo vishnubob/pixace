@@ -2,7 +2,6 @@ import os
 from PIL import Image
 import numpy as np
 from skimage.color import rgb2hsv, hsv2rgb
-from skimage.util import crop
 from . flags import FLAGS
 
 SpecialSymbols = (

@@ -14,7 +14,7 @@ def _handle_flags(argv):
     FLAGS.model_dir = os.path.join(FLAGS.model_dir, FLAGS.model_name)
 
 def runner(argv):
-    command = sys.argv[1]
+    command = argv[1]
 
     if command == "train":
         _handle_flags(argv)
@@ -25,16 +25,17 @@ def runner(argv):
     elif command == "download":
         download_model(argv)
 
-def cli(argv=None):
-    argv = argv or sys.argv
-    command = argv[1]
+def cli():
+    command = sys.argv[1]
     load_flags(command)
-    app.run(runner, argv=argv)
+    app.run(runner)
 
 def wrap_command(command, **kw):
     argv = [sys.argv[0], command]
     argv += [f"--{key}={val}" for (key, val) in kw.items()]
-    return cli(argv=argv)
+    sys.argv = argv
+    print(sys.argv)
+    return cli()
 
 def train(**kw):
     return wrap_command("train", **kw)
