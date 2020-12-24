@@ -46,8 +46,6 @@ def download_flags():
     flags.DEFINE_string('model_dir', 'model-weights', help=('Top level directory for model data.'))
 
 def load_flags(command, argv=None):
-    # hack to clean flags, used for notebook
-    reset_flags()
     if command == "train":
         train_flags()
     elif command == "predict":
@@ -58,5 +56,6 @@ def load_flags(command, argv=None):
         flags.FLAGS(argv)
 
 def reset_flags():
+    # hack to clean flags, used for notebook
     for name in list(flags.FLAGS):
         delattr(flags.FLAGS, name)
