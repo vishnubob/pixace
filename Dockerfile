@@ -23,5 +23,6 @@ RUN cd /pixace/install && \
     python3 setup.py install && \
     cd .. && \
     rm -rf install /root/.cache/*
+ENV TF_CPP_MIN_LOG_LEVEL=3
 WORKDIR /pixace
 ENTRYPOINT ["pixace"]
