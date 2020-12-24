@@ -43,12 +43,14 @@ def download_flags():
     flags.DEFINE_string('checkpoint', "default", help=('Name of the checkpoint'))
     flags.DEFINE_string('model_dir', 'model-weights', help=('Top level directory for model data.'))
 
-def load_flags(command):
+def load_flags(command, argv=None):
     if command == "train":
         train_flags()
     elif command == "predict":
         predict_flags()
     elif command == "download":
         download_flags()
+    if argv is not None:
+        flags.FLAGS(argv)
 
 FLAGS = flags.FLAGS

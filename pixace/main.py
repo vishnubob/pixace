@@ -4,7 +4,7 @@ from absl import app
 
 from . flags import FLAGS, load_flags
 from . train import train_model
-from . predict import predict_model
+from . inference import predict_model
 from . zoo import download_model
 
 def _handle_flags(argv):
@@ -22,6 +22,12 @@ def runner(argv):
         predict_model(argv)
     elif command == "download":
         download_model(argv)
+
+def wrap_command(command, **kw):
+    argv = [sys.argv[0], command]
+    argv += [f"--{key}={val}" for (key, val) in kw.items()]
+    load_flags(command, argv=argv)
+    runner(argv)
 
 def cli():
     command = sys.argv[1]

@@ -113,6 +113,7 @@ def predict_model(argv):
     checkpoint = FLAGS.checkpoint or f"{output_dir}/model.pkl.gz"
     cut = FLAGS.cut
     scale = FLAGS.scale
+    out = FLAGS.out
 
     out_images = []
 
@@ -145,4 +146,4 @@ def predict_model(argv):
         out_images.append(row)
 
     img = build_collage(out_images, batch_size=batch_size, scale=scale)
-    img.save(FLAGS.out)
+    img.save(out)
