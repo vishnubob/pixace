@@ -1,6 +1,8 @@
 import time
 from absl import flags
 
+FLAGS = flags.FLAGS
+
 _get_ts = lambda: time.strftime("%m%d_%H%M")
 
 def common_flags():
@@ -44,6 +46,8 @@ def download_flags():
     flags.DEFINE_string('model_dir', 'model-weights', help=('Top level directory for model data.'))
 
 def load_flags(command, argv=None):
+    # hack to clean flags, used for notebook
+    reset_flags()
     if command == "train":
         train_flags()
     elif command == "predict":
@@ -53,4 +57,6 @@ def load_flags(command, argv=None):
     if argv is not None:
         flags.FLAGS(argv)
 
-FLAGS = flags.FLAGS
+def reset_flags():
+    for name in flags.FLAGS:
+        delattr(flags.FLAGS, name)

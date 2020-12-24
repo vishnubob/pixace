@@ -4,3 +4,4 @@
 - probe embeddings
 - support different aspect ratios
 - create a companion notebook
+- seperate FLAGS from concretes
