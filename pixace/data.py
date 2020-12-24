@@ -69,7 +69,7 @@ class ImageWorker(ListWorker):
 
     def _do_work(self, img_name):
         img_path = self._work_list[img_name]
-        img = Image.open(img_path)
+        img = Image.open(img_path).convert("RGB")
         work = tokens.image_to_tokens(img, size=self.image_size, bitdepth=self.bitdepth)
         work = list(work)
         work = self._auto_regress(work)
