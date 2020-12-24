@@ -58,5 +58,5 @@ def load_flags(command, argv=None):
         flags.FLAGS(argv)
 
 def reset_flags():
-    for name in flags.FLAGS:
+    for name in list(flags.FLAGS):
         delattr(flags.FLAGS, name)
