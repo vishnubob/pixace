@@ -22,12 +22,14 @@ def load_weights(chkpt):
         obj = pickle.load(gz)
     return obj["flat_weights"]
 
+# XXX: hack to make inference go for reformer
+
 gin_config = \
-""" 
-trax.layers.SelfAttention.predict_drop_len = 128
-trax.layers.SelfAttention.predict_mem_len = 1024
-trax.layers.SelfAttention.chunk_len = 1024
-LSHSelfAttention.n_hashes = 4
+"""
+inference/trax.layers.SelfAttention.predict_drop_len = 128
+inference/trax.layers.SelfAttention.predict_mem_len = 1024
+inference/trax.layers.SelfAttention.chunk_len = 1024
+inference/LSHSelfAttention.n_hashes = 4
 """
 
 gin.parse_config(gin_config)
@@ -99,7 +101,8 @@ class Inference(object):
         self.n_tokens = tokens.token_count(bitdepth=self.bitdepth)
         if checkpoint is None:
             checkpoint = os.path.join(self.weights_dir, self.model_name, "model.pkl.gz")
-        self.model = self.load_model(checkpoint)
+        with gin.config_scope('inference'):
+            self.model = self.load_model(checkpoint)
 
     def load_model(self, checkpoint=None):
         msg = f"Loading {self.model_type} model from '{checkpoint}'"
