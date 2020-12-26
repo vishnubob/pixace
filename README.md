@@ -1,8 +1,8 @@
 # pixace
 
-This is my pet project to experiment with modeling image data using [transformers](https://arxiv.org/abs/1706.03762). I only have access to a single 10GB GPU, so my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb)
 
-## [ Check out the [colab notebook](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb) ]
+This is my pet project to experiment with modeling image data using [transformers](https://arxiv.org/abs/1706.03762). I only have access to a single 10GB GPU, so my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
 
 ![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
@@ -26,18 +26,17 @@ For resizing, I decided to use 32x32 images.  These are tiny images, only 1024 p
 
 Using [autoregressive sampling](https://trax-ml.readthedocs.io/en/latest/trax.supervised.html#trax.supervised.decoding.autoregressive_sample_stream), we can use our trained model to complete one half of an image:
 
-![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/fill-in-example.jpg)
+<img src="https://raw.githubusercontent.com/vishnubob/pixace/media/media/fill-in-example.jpg" width=50% />
 
 ## Image Generation
 
 With this same technique, we can also generate entirely new images:
 
-![8x8 panel of generated images of animals](https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg)
+<img src="https://raw.githubusercontent.com/vishnubob/pixace/media/media/zoo-smol.jpg" width=50% />
 
 ## How do I install it?
 
-### If you don't want to go through the hassle of installing pixace yourself, consider checking out the [colab notebook](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb).
-
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb)
 
 You will need to install this python package either as a local package or as a docker image.  There is a lot of package dependencies, so I recommend using docker.  The container is GPU enabled, but there is also a CPU only version of the dockerfile as well.  To use docker, just clone this repository and build the image:
 
