@@ -8,9 +8,10 @@ class BaseTokenModel(object):
         "unk": 3,
     }
 
-    def __init__(self, reserved=None, offset=0):
+    def __init__(self, reserved=None, add_markers=True, offset=0):
         self.reserved = self.DefaultReservedTokens \
                 if reserved is None else reserved
+        self._add_markers = add_markers
         self._bos_id = self.reserved["bos"]
         self._eos_id = self.reserved["eos"]
         self.offset = offset
@@ -29,13 +30,15 @@ class BaseTokenModel(object):
     def encode(self, ary):
         ary = ary + self.offset
         # add bos and eos
-        ary = np.pad(ary, (1, 1), 
-            constant_values=(self._bos_id, self._eos_id))
+        if self._add_markers:
+            ary = np.pad(ary, (1, 1), 
+                constant_values=(self._bos_id, self._eos_id))
         return ary
 
     def decode(self, toks):
-        # filter out bos and eos
-        toks = toks[toks != self._bos_id]
-        toks = toks[toks != self._eos_id]
+        if self._add_markers:
+            # filter out bos and eos
+            toks = toks[toks != self._bos_id]
+            toks = toks[toks != self._eos_id]
         toks = toks - self.offset
         return toks

@@ -3,8 +3,9 @@ import threading
 import numpy as np
 
 class BaseTask(object):
-    def __init__(self, seed=0):
+    def __init__(self, max_len=None, seed=0):
         self.seed = seed
+        self.max_len = max_len
 
     def shuffle_forever(self, items):
         assert len(items) > 0

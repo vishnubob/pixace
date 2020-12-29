@@ -36,7 +36,6 @@ class Trainer(object):
         self.weights_dir = weights_dir
         self.bitdepth = bitdepth
         self.image_size = image_size
-        self.max_length = self.image_size ** 2 + 2
     
     def init_generators(self, batch_size=None, images=None, val_images=None):
         train_gen = ImageTask.build(
@@ -62,12 +61,12 @@ class Trainer(object):
         return (train_gen, eval_gen)
 
     def init_model(self):
-        msg = f"Initializing {self.model_type} model (n_tokens={self.n_tokens}, max_len={self.max_length}, image_size={self.image_size}, bitdepth={self.bitdepth})"
+        msg = f"Initializing {self.model_type} model (n_tokens={self.n_tokens}, max_len={self.max_len}, image_size={self.image_size}, bitdepth={self.bitdepth})"
         print(msg)
         if self.model_type == "transformer":
-            model = trax.models.TransformerLM(self.n_tokens, max_len=self.max_length, mode="train")
+            model = trax.models.TransformerLM(self.n_tokens, max_len=self.max_len, mode="train")
         elif self.model_type == "reformer":
-            model = trax.models.ReformerLM(self.n_tokens, max_len=self.max_length, mode="train")
+            model = trax.models.ReformerLM(self.n_tokens, max_len=self.max_len, mode="train")
         else:
             msg = f"Unknown model type '{self.model_type}'"
             raise ValueError(msg)
@@ -91,6 +90,7 @@ class Trainer(object):
         batch = next(train_itr)
         print([item.shape for item in batch])
         self.n_tokens = train_gen.tokenizer.n_tokens
+        self.max_len = train_gen.max_len
 
         model = self.init_model()
         train_task = training.TrainTask(

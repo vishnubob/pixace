@@ -10,17 +10,8 @@ from absl import logging
 from PIL import Image
 import gin
 
-from . import tokens
-#from . data import iter_dataset
+from . tokens import ImageTokenModel
 from . utils import download_image_from_web
-
-def softmax(ary):
-    return np.exp(ary) / sum(np.exp(ary))
-
-def load_weights(chkpt):
-    with gzip.GzipFile(chkpt) as gz:
-        obj = pickle.load(gz)
-    return obj["flat_weights"]
 
 # XXX: hack to make inference go for reformer
 
@@ -55,7 +46,7 @@ def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0):
     
     return result
 
-def load_images(paths, size=None, bitdepth=None):
+def load_images(paths, tokenizer):
     images = []
     for path in paths:
         if not os.path.exists(path):
@@ -69,20 +60,20 @@ def load_images(paths, size=None, bitdepth=None):
             img = Image.open(path)
         images.append(img)
 
-    toks = [tokens.image_to_tokens(img, size=size, bitdepth=bitdepth) for img in images] 
+    toks = [tokenizer.encode_image(img) for img in images] 
     toks = np.array(toks, dtype=np.int32)
     return toks
 
-def build_collage(img_list, batch_size=None, scale=None, bitdepth=None):
+def build_collage(img_list, batch_size=None, scale=None, tokenizer=None):
     n_rows = len(img_list)
     rows = []
     for row in img_list:
-        row = [tokens.tokens_to_image_array(it, bitdepth=bitdepth) for it in row]
+        row = [tokenizer.decode(it) for it in row] 
         row = [np.pad(it, ((1, 1), (1, 1), (0, 0))) for it in row]
         row = np.vstack(row)
         rows.append(row)
     tbl = np.hstack(rows)
-    img = tokens.array_to_image(tbl)
+    img = tokenizer.array_to_image(tbl)
     width = n_rows * scale
     height = batch_size * scale
     img = img.resize((width, height))
@@ -97,8 +88,10 @@ class Inference(object):
         self.weights_dir = weights_dir
         self.bitdepth = bitdepth
         self.image_size = image_size
+        self.tokenizer = ImageTokenModel(image_size=self.image_size, bitdepth=bitdepth)
+        # XXX: max-len
         self.max_length = self.image_size ** 2
-        self.n_tokens = tokens.token_count(bitdepth=self.bitdepth)
+        self.n_tokens = self.tokenizer.n_tokens
         if checkpoint is None:
             checkpoint = os.path.join(self.weights_dir, self.model_name, "model.pkl.gz")
         with gin.config_scope('inference'):
@@ -129,7 +122,7 @@ class Inference(object):
         out_images = []
 
         if prompts:
-            inp = load_images(prompts, size=self.image_size, bitdepth=self.bitdepth)
+            inp = load_images(prompts, self.tokenizer)
             batch_size = inp.shape[0]
 
             if cut is None:
@@ -154,7 +147,7 @@ class Inference(object):
             row = autoreg(self.model, batch_size=batch_size, inp=inp, length=length, temperature=temp)
             out_images.append(row)
 
-        img = build_collage(out_images, batch_size=batch_size, scale=scale, bitdepth=self.bitdepth)
+        img = build_collage(out_images, batch_size=batch_size, scale=scale, tokenizer=self.tokenizer)
         return img
 
     @classmethod
