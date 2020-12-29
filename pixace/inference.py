@@ -11,7 +11,7 @@ from PIL import Image
 import gin
 
 from . import tokens
-from . data import iter_dataset
+#from . data import iter_dataset
 from . utils import download_image_from_web
 
 def softmax(ary):

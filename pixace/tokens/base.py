@@ -27,8 +27,8 @@ class BaseTokenModel(object):
         return self.offset
 
     def encode(self, ary):
-        # add bos and eos
         ary = ary + self.offset
+        # add bos and eos
         ary = np.pad(ary, (1, 1), 
             constant_values=(self._bos_id, self._eos_id))
         return ary
@@ -39,4 +39,3 @@ class BaseTokenModel(object):
         toks = toks[toks != self._eos_id]
         toks = toks - self.offset
         return toks
-

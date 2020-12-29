@@ -1,9 +1,10 @@
 import os
 import io
-import requests
-import fnmatch
-from PIL import Image
 import tempfile
+from fnmatch import fnmatch
+from pathlib import Path
+import requests
+from PIL import Image
 
 def download_image_from_web(url):
     resp = requests.get(url)

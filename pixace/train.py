@@ -9,21 +9,18 @@ import trax
 import trax.layers as tl
 from trax.supervised import training
 
-from . data import iter_dataset, scan_for_images
-from . import tokens
+from . tasks import ImageTask
 
 _get_ts = lambda: time.strftime("%m%d_%H%M")
 
-def generate_sample_images(training_loop, batch_itr, model, image_size=None, bitdepth=None):
-    inp = next(batch_itr)[0]
-    logits = model(inp)
-    toks = np.argmax(logits, axis=-1)
-    toks = np.pad(toks, ((0, 0), (1, 0)))[:, :-1]
-
+def render_samples(training_loop, logits, task, rows=2):
+    res = task.render_samples(logits)
     with training_loop._open_summary_writers() as (stl, sel):
-        images = [tokens.tokens_to_image_array(toks, bitdepth=bitdepth) for toks in toks]
-        images = (np.array(images) * 0xFF).astype(np.uint8)
-        sel[0].images(f"gen/{training_loop._step}", images=images, step=training_loop._step, rows=2)
+        for (key, val) in res.items():
+            if key == "images":
+                sel[0].images(f"gen/{training_loop._step}", images=val, step=training_loop._step, rows=rows)
+            else:
+                raise ValueError(key)
 
 def backup_checkpoint(output_dir, training_loop):
     old_path = os.path.join(output_dir, f"model.pkl.gz")
@@ -39,13 +36,11 @@ class Trainer(object):
         self.weights_dir = weights_dir
         self.bitdepth = bitdepth
         self.image_size = image_size
-        self.max_length = self.image_size ** 2
-        self.n_tokens = tokens.token_count(bitdepth=self.bitdepth)
+        self.max_length = self.image_size ** 2 + 2
     
-    def init_data(self, batch_size=None, images=None, val_images=None):
-        training_image_list = scan_for_images(images)
-        train_itr = iter_dataset(
-            training_image_list, 
+    def init_generators(self, batch_size=None, images=None, val_images=None):
+        train_gen = ImageTask.build(
+            path=images, 
             batch_size=batch_size, 
             image_size=self.image_size, 
             bitdepth=self.bitdepth, 
@@ -57,15 +52,14 @@ class Trainer(object):
             print(msg)
             val_images = images
 
-        val_images = scan_for_images(val_images)
-        eval_itr = iter_dataset(
+        eval_gen = ImageTask.build(
             val_images, 
             batch_size=batch_size, 
             image_size=self.image_size, 
             bitdepth=self.bitdepth, 
             group="val"
         )
-        return (train_itr, eval_itr)
+        return (train_gen, eval_gen)
 
     def init_model(self):
         msg = f"Initializing {self.model_type} model (n_tokens={self.n_tokens}, max_len={self.max_length}, image_size={self.image_size}, bitdepth={self.bitdepth})"
@@ -86,15 +80,19 @@ class Trainer(object):
         eval_metrics = [
             tl.WeightedCategoryCrossEntropy(), 
             tl.WeightedCategoryAccuracy(),
-            tl.MaskedSequenceAccuracy(),
         ]
         opt = trax.optimizers.Adam()
-        model = self.init_model()
         if steps_per_eval is None:
             steps_per_eval = max(1, steps_per_epoch // 10)
 
-        (train_itr, eval_itr) = self.init_data(batch_size=batch_size, images=images, val_images=val_images)
+        (train_gen, eval_gen) = self.init_generators(batch_size=batch_size, images=images, val_images=val_images)
+        (train_itr, eval_itr) = (iter(train_gen), iter(eval_gen))
 
+        batch = next(train_itr)
+        print([item.shape for item in batch])
+        self.n_tokens = train_gen.tokenizer.n_tokens
+
+        model = self.init_model()
         train_task = training.TrainTask(
             labeled_data=train_itr,
             loss_layer=loss,
@@ -116,10 +114,18 @@ class Trainer(object):
             output_dir=output_dir
         )
 
+        sample_batch = next(eval_itr)
+        logits = model(sample_batch[0])
+        render_samples(training_loop, logits, eval_gen)
+
         for epoch in range(n_epochs):
             training_loop.run(steps_per_epoch)
             backup_checkpoint(output_dir, training_loop)
-            generate_sample_images(training_loop, eval_itr, model, image_size=self.image_size, bitdepth=self.bitdepth)
+            
+            # sample output
+            sample_batch = next(eval_itr)
+            logits = model(sample_batch[0])
+            render_samples(training_loop, logits, eval_gen)
 
     @classmethod
     def _absl_main(cls, argv):

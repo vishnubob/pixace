@@ -1,24 +1,23 @@
 import multiprocessing as mp
 import threading
-import jax
+import numpy as np
 
 class BaseTask(object):
-    def __init__(self, rngkey=None):
-        rngkey = rngkey or jax.random.PRNGKey(0)
-        self.cpu = jax.devices("cpu")[0]
-        self.rngkey = jax.device_put(rngkey, self.cpu)
+    def __init__(self, seed=0):
+        self.seed = seed
 
     def shuffle_forever(self, items):
-        np_index = np.arange(len(items), dtype=np.int32)
+        assert len(items) > 0
+        item_order = np.arange(len(items), dtype=np.int32)
         
+        next_seed = self.seed
         while True:
-            # don't add burden to GPU
-            jnp_index = jax.device_put(jnp.array(np_index), cpu)
-            (self.rngkey, key) = jax.random.split(self.rngkey)
-            index = jax.random.permutaton(key, jnp_index).tolist()
+            np.random.seed(next_seed)
+            next_seed = np.random.randint(2 ** 31)
+            np.random.shuffle(item_order)
 
-            for item in index:
-                yield item
+            for idx in item_order:
+                yield items[idx]
 
 class WorkQueues(object):
     __quemap__ = {}
@@ -54,8 +53,8 @@ class QueueWorker(mp.Process):
         return job
 
     def loop(self):
-        job = self.get_job_new()
-        result = self.process(job)
+        job = self.get_work()
+        result = self.process_job(job)
         self.return_result(result)
 
     def run(self):
@@ -68,14 +67,17 @@ class QueueWorker(mp.Process):
 class BatchWorker(QueueWorker):
     def __init__(self, batch_size=None, **kw):
         super().__init__(**kw)
+        assert batch_size is not None
         self.batch_size = batch_size
         self._current_batch = []
 
     def return_result(self, job):
         self._current_batch.append(job)
+        assert len(self._current_batch) <= self.batch_size
         if len(self._current_batch) == self.batch_size:
             batch = [np.vstack(it) for it in zip(*self._current_batch)]
-            super().return_batch(batch)
+            assert batch[0].shape[0] == self.batch_size
+            super().return_result(batch)
             self._current_batch = []
 
 class DatasetGenerator(threading.Thread):
@@ -86,7 +88,7 @@ class DatasetGenerator(threading.Thread):
         self.daemon = True
         self.data = data
         self.group = group
-        self.ques = DataQueues(qsize, group=self.group)
+        self.ques = WorkQueues(qsize, group=self.group)
         self.n_workers = n_workers
         self.worker_class = worker_class or self.DefaultWorkerClass
         self.worker_config = worker_config or dict()
@@ -99,14 +101,13 @@ class DatasetGenerator(threading.Thread):
             conf = self.worker_config.copy()
             conf["worker_id"] = worker_id
             conf["group"] = self.group
-            worker = DataWorker(**conf)
+            worker = self.worker_class(**conf)
             worker.start()
             workers.append(worker)
         return workers
 
     def run(self):
         msg = f"{self.__class__.__name__} Stating dispatch loop ({id(self.ques.todo)})"
-        self._running = True
         for item in self.data:
             self.ques.todo.put(item)
             if not self._running:
@@ -114,6 +115,7 @@ class DatasetGenerator(threading.Thread):
 
     def __iter__(self):
         # XXX: this can leave data in the queue
+        self._running = True
         self.start()
         while self._running:
             yield self.ques.done.get()
