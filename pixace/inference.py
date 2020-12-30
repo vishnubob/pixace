@@ -17,10 +17,10 @@ from . utils import download_image_from_web
 
 gin_config = \
 """
-inference/trax.layers.SelfAttention.predict_drop_len = 128
-inference/trax.layers.SelfAttention.predict_mem_len = 1024
+#inference/trax.layers.SelfAttention.predict_drop_len = 128
+#inference/trax.layers.SelfAttention.predict_mem_len = 1024
 inference/trax.layers.SelfAttention.chunk_len = 1024
-inference/LSHSelfAttention.n_hashes = 4
+#inference/LSHSelfAttention.n_hashes = 4
 """
 
 gin.parse_config(gin_config)
@@ -129,7 +129,7 @@ class Inference(object):
                 cut = self.max_length // 2
             out_images.append(inp)
             inp = inp[:, :cut]
-            pad = np.zeros((batch_size, self.max_length - cut), dtype=np.int32)
+            pad = np.ones((batch_size, self.max_length - cut), dtype=np.int32) * self.tokenizer.offset
             actual = np.concatenate((inp, pad), axis=-1)
             out_images.append(actual)
         else:

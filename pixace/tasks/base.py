@@ -1,5 +1,6 @@
-import multiprocessing as mp
+import traceback
 import threading
+import multiprocessing as mp
 import numpy as np
 
 class BaseTask(object):
@@ -63,7 +64,11 @@ class QueueWorker(mp.Process):
         print(msg)
         self._running = True
         while self._running:
-            self.loop()
+            try:
+                self.loop()
+            except:
+                traceback.print_exc()
+                continue
 
 class BatchWorker(QueueWorker):
     def __init__(self, batch_size=None, **kw):

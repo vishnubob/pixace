@@ -27,8 +27,10 @@ def train_flags():
     flags.DEFINE_integer('steps_per_epoch', 1000, help=('Number of steps per epochs'))
     flags.DEFINE_integer('steps_per_eval', None, help=('Number of steps per eval'))
     flags.DEFINE_integer('n_epochs', 100, help=('Number of epochs'))
-    flags.DEFINE_string('images', "images", help=('Path to top level directory of images used for training'))
-    flags.DEFINE_string('val_images', None, help=('Path to top level directory of images used for validation'))
+    flags.DEFINE_string('train_data', "images", help=('Training data'))
+    flags.DEFINE_string('val_data', None, help=('Validation data'))
+    flags.DEFINE_string('spm_model', None, help=('SPM model'))
+    flags.DEFINE_integer('max_len', None, help=('max len'))
 
 def predict_flags():
     common_flags()

@@ -36,9 +36,9 @@ class BaseTokenModel(object):
         return ary
 
     def decode(self, toks):
+        toks = toks - self.offset
         if self._add_markers:
             # filter out bos and eos
             toks = toks[toks != self._bos_id]
             toks = toks[toks != self._eos_id]
-        toks = toks - self.offset
         return toks

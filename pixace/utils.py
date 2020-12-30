@@ -30,5 +30,5 @@ def scan_for_files(path, patterns="*"):
             yield pt
 
 def scan_for_images(path, patterns=None):
-    patterns = patterns or ["*.jpg", "*.jpeg", "*.png"]
+    patterns = patterns or ["*.jpg", "*.jpeg", "*.png", "*.gif"]
     return scan_for_files(path, patterns)

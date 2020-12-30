@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import shutil
 
@@ -9,7 +10,7 @@ import trax
 import trax.layers as tl
 from trax.supervised import training
 
-from . tasks import ImageTask
+from . tasks import ImageTask, TextImageTask
 
 _get_ts = lambda: time.strftime("%m%d_%H%M")
 
@@ -19,8 +20,6 @@ def render_samples(training_loop, logits, task, rows=2):
         for (key, val) in res.items():
             if key == "images":
                 sel[0].images(f"gen/{training_loop._step}", images=val, step=training_loop._step, rows=rows)
-            else:
-                raise ValueError(key)
 
 def backup_checkpoint(output_dir, training_loop):
     old_path = os.path.join(output_dir, f"model.pkl.gz")
@@ -30,14 +29,48 @@ def backup_checkpoint(output_dir, training_loop):
     shutil.copyfile(old_path, new_path)
 
 class Trainer(object):
-    def __init__(self, model_name=None, model_type="reformer", weights_dir="model-weights", image_size=32, bitdepth=(5,4,4)):
+    def __init__(self, model_name=None, model_type="reformer", weights_dir="model-weights", max_len=None, image_size=32, bitdepth=(5,4,4)):
         self.model_name = model_name or _get_ts()
         self.model_type = model_type
         self.weights_dir = weights_dir
         self.bitdepth = bitdepth
         self.image_size = image_size
+        self.max_len = max_len
     
-    def init_generators(self, batch_size=None, images=None, val_images=None):
+    def init_generators(self, spm_model=None, batch_size=None, train=None, val=None):
+        with open(train) as fh:
+            train = json.load(fh)
+
+        train_gen = TextImageTask.build(
+            data=train, 
+            spm_model=spm_model,
+            batch_size=batch_size, 
+            max_len=self.max_len,
+            image_size=self.image_size, 
+            bitdepth=self.bitdepth, 
+            group="train"
+        )
+
+        if val:
+            with open(val) as fh:
+                val = json.load(fh)
+        else:
+            msg = "Warning: no validation data, using training images as a substitute"
+            val = train
+
+        val_gen = TextImageTask.build(
+            data=val, 
+            spm_model=spm_model,
+            batch_size=batch_size, 
+            max_len=self.max_len,
+            image_size=self.image_size, 
+            bitdepth=self.bitdepth, 
+            group="train"
+        )
+
+        return (train_gen, val_gen)
+
+    def _init_generators(self, batch_size=None, images=None, val_images=None):
         train_gen = ImageTask.build(
             path=images, 
             batch_size=batch_size, 
@@ -72,7 +105,7 @@ class Trainer(object):
             raise ValueError(msg)
         return model
 
-    def train(self, batch_size=8, steps_per_epoch=100, steps_per_eval=None, n_epochs=10, images="images", val_images=None):
+    def train(self, batch_size=8, steps_per_epoch=100, steps_per_eval=None, n_epochs=10, train_data=None, val_data=None, max_len=None, spm_model=None):
         output_dir = os.path.join(self.weights_dir, self.model_name)
         lr = trax.lr.multifactor()
         loss = tl.WeightedCategoryCrossEntropy()
@@ -84,13 +117,10 @@ class Trainer(object):
         if steps_per_eval is None:
             steps_per_eval = max(1, steps_per_epoch // 10)
 
-        (train_gen, eval_gen) = self.init_generators(batch_size=batch_size, images=images, val_images=val_images)
+        (train_gen, eval_gen) = self.init_generators(batch_size=batch_size, train=train_data, val=val_data, spm_model=spm_model)
         (train_itr, eval_itr) = (iter(train_gen), iter(eval_gen))
 
-        batch = next(train_itr)
-        print([item.shape for item in batch])
         self.n_tokens = train_gen.tokenizer.n_tokens
-        self.max_len = train_gen.max_len
 
         model = self.init_model()
         train_task = training.TrainTask(
@@ -137,13 +167,15 @@ class Trainer(object):
             weights_dir=FLAGS.weights_dir,
             image_size=FLAGS.image_size,
             bitdepth=FLAGS.bitdepth,
+            max_len=FLAGS.max_len
         )
 
         trainer.train(
             batch_size=FLAGS.batch_size,
+            spm_model=FLAGS.spm_model,
             steps_per_epoch=FLAGS.steps_per_epoch,
             steps_per_eval=FLAGS.steps_per_eval,
             n_epochs=FLAGS.n_epochs,
-            images=FLAGS.images,
-            val_images=FLAGS.val_images
+            train_data=FLAGS.train_data,
+            val_data=FLAGS.val_data,
         )
