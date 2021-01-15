@@ -29,8 +29,8 @@ def get_predictor(
         bitdepth=(5,4,4)
     ):
 
-    from . inference import Inference
-    return Inference(
+    from . decode import Decoder
+    return Decoder(
         model_name=model_name,
         model_type=model_type,
         weights_dir=weights_dir,

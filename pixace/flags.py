@@ -9,9 +9,13 @@ def common_flags():
     flags.DEFINE_string('weights_dir', 'model-weights', help=('Top level directory for model data.'))
     flags.DEFINE_integer('batch_size', 16, help=('Batch size for training.'))
     # XXX: allow other aspect ratios
-    flags.DEFINE_integer('image_size', 32, help=('Edge size for square image.'))
-    flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
+    #flags.DEFINE_integer('image_size', 32, help=('Edge size for square image.'))
+    #flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
+    #flags.DEFINE_string('spm_model', None, help=('SPM model'))
+    #flags.DEFINE_integer('max_len', None, help=('max len'))
+    flags.DEFINE_multi_string('tokenizer', None, help=('Tokenizer spec, can be used more than once'))
 
+    """
     @flags.validator("bitdepth", "bitdepth requires three comma seperated ints")
     def _validate_bitdepth(value):
         if len(value) != 3:
@@ -21,20 +25,19 @@ def common_flags():
             for it in value
         ]
         return all(digs)
+    """
 
 def train_flags():
     common_flags()
     flags.DEFINE_integer('steps_per_epoch', 1000, help=('Number of steps per epochs'))
     flags.DEFINE_integer('steps_per_eval', None, help=('Number of steps per eval'))
     flags.DEFINE_integer('n_epochs', 100, help=('Number of epochs'))
-    flags.DEFINE_string('train_data', "images", help=('Training data'))
-    flags.DEFINE_string('val_data', None, help=('Validation data'))
-    flags.DEFINE_string('spm_model', None, help=('SPM model'))
-    flags.DEFINE_integer('max_len', None, help=('max len'))
+    flags.DEFINE_string('train_data', "images", help=('JSON file containing a list of dicts'))
+    flags.DEFINE_string('val_data', None, help=('JSON file containing a list of dicts'))
 
 def predict_flags():
     common_flags()
-    flags.DEFINE_string('checkpoint', None, help=('Path to checkpoint'))
+    flags.DEFINE_string('checkpoint', None, help=('Path to checkpoint (default is latest)'))
     flags.DEFINE_list('prompt', [], help=('one or more prompt images, optional'))
     flags.DEFINE_integer('cut', None, help=('Cut input image at pixel #'))
     # XXX: normalize scale around 1 or 100
@@ -56,8 +59,3 @@ def load_flags(command, argv=None):
         download_flags()
     if argv is not None:
         flags.FLAGS(argv)
-
-def reset_flags():
-    # hack to clean flags, used for notebook
-    for name in list(flags.FLAGS):
-        delattr(flags.FLAGS, name)

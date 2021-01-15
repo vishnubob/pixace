@@ -3,24 +3,6 @@ import threading
 import multiprocessing as mp
 import numpy as np
 
-class BaseTask(object):
-    def __init__(self, max_len=None, seed=0):
-        self.seed = seed
-        self.max_len = max_len
-
-    def shuffle_forever(self, items):
-        assert len(items) > 0
-        item_order = np.arange(len(items), dtype=np.int32)
-        
-        next_seed = self.seed
-        while True:
-            np.random.seed(next_seed)
-            next_seed = np.random.randint(2 ** 31)
-            np.random.shuffle(item_order)
-
-            for idx in item_order:
-                yield items[idx]
-
 class WorkQueues(object):
     __quemap__ = {}
 
@@ -87,29 +69,26 @@ class BatchWorker(QueueWorker):
             self._current_batch = []
 
 class DatasetGenerator(threading.Thread):
-    DefaultWorkerClass = QueueWorker
-
-    def __init__(self, data, group=None, n_workers=4, qsize=64, worker_class=None, worker_config=None):
+    def __init__(self, data, group=None, n_workers=4, qsize=64, worker_ctor=None):
         super().__init__()
         self.daemon = True
         self.data = data
         self.group = group
         self.ques = WorkQueues(qsize, group=self.group)
         self.n_workers = n_workers
-        self.worker_class = worker_class or self.DefaultWorkerClass
-        self.worker_config = worker_config or dict()
+        self.worker_ctor = worker_ctor
         self._workers = self.build_workers()
         self._running = False
 
     def build_workers(self):
         workers = []
         for worker_id in range(self.n_workers):
-            conf = self.worker_config.copy()
-            conf["worker_id"] = worker_id
-            conf["group"] = self.group
-            worker = self.worker_class(**conf)
-            worker.start()
+            worker = self.worker_ctor(
+                worker_id=worker_id,
+                group=group
+            )
             workers.append(worker)
+            worker.start()
         return workers
 
     def run(self):
@@ -126,3 +105,44 @@ class DatasetGenerator(threading.Thread):
         while self._running:
             yield self.ques.done.get()
         raise StopIteration
+
+class TokenizeWorker(QueueWorker):
+    def __init__(self, tokenizer=None, **kw):
+        super().__init__(**kw)
+        self.tokenizer = tokenizer
+
+    def process_job(self, job):
+        work = self.tokenizer.encode(job)
+        work = np.array(work).astype(np.int32)
+        weights = (work != 0).astype(np.float)
+        return (work, work, weights)
+
+class TokenizeTask(object):
+    def __init__(self, data=None, worker_ctor=None, group=None, seed=0):
+        self.data = tuple(data)
+        self.batch_size = batch_size
+        self.group = group
+        self.seed = seed
+        self.worker_ctor = worker_ctor
+
+    def __iter__(self):
+        dsgen = DatasetGenerator(
+            data=self.shuffle_forever(self.data),
+            group=self.group,
+            worker_ctor=self.worker_ctor,
+        )
+
+        return iter(dsgen)
+
+    def shuffle_forever(self, items):
+        assert len(items) > 0
+        item_order = np.arange(len(items), dtype=np.int32)
+        
+        next_seed = self.seed
+        while True:
+            np.random.seed(next_seed)
+            next_seed = np.random.randint(2 ** 31)
+            np.random.shuffle(item_order)
+
+            for idx in item_order:
+                yield items[idx]

@@ -39,8 +39,23 @@ class SentenceTask(BaseTask):
 
         return iter(dsgen)
 
+    def render_samples(self, logits, n_samples=None):
+        if n_samples:
+            logits = logits[:n_samples, ...]
+        toks = np.argmax(logits, axis=-1)
+
+        results = []
+        for tk in toks:
+            try:
+                text = self.tokenizer.decode(tk)
+                results.append(text)
+            except ValueError:
+                results.append("<error>")
+
+        return {"text": results}
+
     @classmethod
-    def build(cls, fn_model=None, corpus=None, max_len=None, batch_size=None, group=None):
+    def build(cls, corpus=None, fn_model=None, max_len=None, batch_size=None, group=None):
         text = [ln for ln in text if len(ln) < max_len]
         if len(text) == 0:
             msg = f"No text provided"
@@ -60,18 +75,3 @@ class SentenceTask(BaseTask):
         )
 
         return task
-
-    def render_samples(self, logits, n_samples=None):
-        if n_samples:
-            logits = logits[:n_samples, ...]
-        toks = np.argmax(logits, axis=-1)
-
-        results = []
-        for tk in toks:
-            try:
-                text = self.tokenizer.decode(tk)
-                results.append(text)
-            except ValueError:
-                results.append("<error>")
-
-        return {"text": results}

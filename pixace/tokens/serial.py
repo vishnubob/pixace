@@ -1,12 +1,14 @@
 import numpy as np
-from . base import BaseTokenModel
+from . base import TokenModel
+from . image import ImageTokenModel
+from . text import TextTokenModel
 
-class SerialTokenModel(BaseTokenModel):
-    def __init__(self, models=None, order=None, max_len=None, **kw):
-        super().__init__(**kw)
+class SerialTokenModel(TokenModel):
+    def __init__(self, models=None, order=None, **kw):
         self.models = models
         self.order = order
-        self.max_len = max_len
+        max_len = sum([self.models[key].max_len for key in self.models])
+        super().__init__(max_len=max_len, **kw)
 
     @property
     def n_tokens(self):
@@ -19,17 +21,14 @@ class SerialTokenModel(BaseTokenModel):
         offset = 0
         for key in self.order:
             (model, part) = (self.models[key], parts[key])
-            if key == "image":
+            if isinstance(model, ImageTokenModel):
                 part = model.encode_image(part) + offset
             else:
                 part = model.encode(part) + offset
             offset += model.n_tokens
             encoded.append(part)
         encoded = np.concatenate(encoded, axis=-1)
-        padlen = self.max_len - len(encoded)
-        if padlen > 0:
-            pad = np.zeros((padlen, ), dtype=np.int32)
-            encoded = np.concatenate((encoded, pad), axis=-1)
+        encoded = self.pad(encoded)
         return encoded
 
     def decode(self, toks):
@@ -40,7 +39,7 @@ class SerialTokenModel(BaseTokenModel):
             part = toks - offset
             part = part[part > 0]
             part = part[part < model.n_tokens]
-            if key == "image":
+            if isinstance(model, ImageTokenModel):
                 part = model.decode_image(part)
             else:
                 part = model.decode(part)
