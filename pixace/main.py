@@ -6,9 +6,8 @@ from . flags import FLAGS, load_flags
 from . import tokens
 
 def _handle_flags(argv):
-    tok_list = [tokens.config.parse_tokenizer(val) for val in FLAGS.tokenizer]
-    tokenizer = tokens.config.build_tokenizer(tok_list)
-    FLAGS.tokenizer = tokenizer
+    toks = tokens.config.parse_and_build_tokenizer(FLAGS.tokenizer)
+    FLAGS.tokenizer = toks
 
 def cli_runner(argv):
     command = argv[1]

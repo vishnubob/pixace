@@ -34,7 +34,7 @@ def parse_tokenizer(val):
     if t_type == "image":
         allowed = ("type", "colorspace", "bitdepth", "image_size", "n_channels", "key")
     elif t_type == "text":
-        allowed = ("type", "max_len", "key", "spm_model")
+        allowed = ("type", "max_len", "key", "model_file")
     else:
         raise ValueError(t_type)
     bad_keys = set(attrs.keys()) - set(allowed)
@@ -55,3 +55,8 @@ def build_tokenizer(tok_list):
         models[t_key] = tok_model
         order.append(t_key)
     return SerialTokenModel(models=models, order=order)
+
+def parse_and_build_tokenizer(tok_list):
+    tok_list = [parse_tokenizer(val) for val in tok_list]
+    return build_tokenizer(tok_list)
+

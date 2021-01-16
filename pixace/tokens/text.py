@@ -5,34 +5,31 @@ import sentencepiece as spm
 from . base import TokenModel
 
 class TextTokenModel(TokenModel):
-    def __init__(self, spm_model=None, **kw):
-        super().__init__(**kw, offset=0)
-        self._model = None
-        if spm_model is not None:
-            self.load_model(spm_model)
+    def __init__(self, model_file="tokens.dat", **kw):
+        super().__init__(offset=0, **kw)
+        assert os.path.exists(model_file)
+        self._model = spm.SentencePieceProcessor(model_file=model_file)
 
     @property
     def n_tokens(self):
         return super().n_tokens + self._model.vocab_size()
 
-    def load_model(self, spm_model=None):
-        self._model = spm.SentencePieceProcessor(model_file=spm_model)
-
-    def build(self, fn_model=None, corpus=None, vocab_size=None, model_type="bpe", force=False):
-        assert not os.path.exists(fn_model) or force
+    @classmethod
+    def build(cls, corpus=None, vocab_size=None, model_type="bpe", save_as="tokens.dat", force=False, **kw):
+        assert not os.path.exists(save_as) or force
 
         idmap = {}
-        # defined by sentence piece
+        ins = TokenModel(**kw)
         reserved = ("pad", "bos", "eos", "unk")
         for key in reserved:
             id_key = f"{key}_id"
-            if key in self.reserved:
-                idmap[id_key] = self.tokens[key]
+            if key in ins.tokens:
+                idmap[id_key] = ins.tokens[key]
             else:
                 idmap[id_key] = None
 
         try:
-            with open(fn_model, 'wb') as fh:
+            with open(save_as, 'wb') as fh:
                 spm.SentencePieceTrainer.train(
                     sentence_iterator=iter(corpus),
                     model_type=model_type,
@@ -41,14 +38,15 @@ class TextTokenModel(TokenModel):
                     **idmap
                 )
         except:
-            os.unlink(fn_model)
+            os.unlink(save_as)
             raise
 
-        self.load_model(fn_model)
+        return cls(model_file=save_as, **kw)
 
     def encode(self, txt):
         encoded = self._model.encode(txt)
         encoded = self.trim(encoded, max_len=self.max_len - 2)
+        encoded = np.array(encoded)
         encoded = super().encode(encoded)
         return encoded
     

@@ -2,7 +2,7 @@ import numpy as np
 
 class Token(object):
     def __init__(self, name=None, value=None):
-        assert name and value
+        assert name is not None and value is not None
         assert type(value) == int
         self.name = name
         self.value = value
@@ -13,7 +13,7 @@ class Token(object):
     def __int__(self):
         return self.value
 
-def TokenMap(object):
+class TokenMap(object):
     def __init__(self, tokens=tuple()):
         self.tokens = tokens
         self.names = {sp.name: sp.value for sp in self.tokens}
@@ -46,13 +46,18 @@ def TokenMap(object):
         return self.names[key]
 
 class TokenModel(object):
-    def __init__(self, tokens=tuple(), max_len=None, add_markers=True, offset=None, dtype=np.int32):
-        self.tokens = TokenMap(tokens)
+    def __init__(self, tokens=None, max_len=None, add_markers=True, offset=None, dtype=np.int32):
+        assert max_len is not None
+        if tokens is None:
+            self.tokens = TokenMap.default_tokens()
+        else:
+            self.tokens = TokenMap(tokens)
         self.add_markers = add_markers
         self.max_len = max_len
         self.offset = offset if offset is not None else len(self.tokens)
         if self.add_markers:
             self.max_len += 2
+        self.dtype = dtype
 
     @property
     def n_tokens(self):
@@ -112,11 +117,10 @@ class TokenModel(object):
     def encode(self, ary):
         ary = ary + self.offset
         if self.add_markers:
-            ary = self.add_pos_eos(ary)
+            ary = self.add_bos_eos(ary)
         return ary.astype(self.dtype)
 
     def decode(self, ary):
-        ary = ary + self.offset
         if self.add_markers:
             ary = self.filter_values(ary)
         ary = ary - self.offset
