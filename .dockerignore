@@ -1,5 +1,12 @@
 *weights*
+*image*
 tarpit
 __pycache__
-animal-faces
 .*.sw?
+samples
+examples
+tarpit
+tools
+texts
+generated
+app

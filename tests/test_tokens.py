@@ -1,52 +1,4 @@
-import os
-import tempfile
-import logging
-
-import numpy as np
-from PIL import Image
-
-import pytest
-import random
-from pixace import tokens
-
-logger = logging.getLogger()
-
-def bench(with_corpus=False):
-    def decorator(func):
-        def rand_and_join(lst, minmax, joinc):
-            random.shuffle(lst)
-            wlen = random.randint(*minmax)
-            return str.join(joinc, lst[:wlen])
-
-        def make_test_corpus():
-            alpha = [chr(x) for x in range(ord('a'), ord('z') + 1)]
-            words = [rand_and_join(alpha, (1, 10), '') for x in range(1000)]
-            corpus = [rand_and_join(words, (5, 200), ' ') for x in range(1000)]
-            with open("corpus.txt", "w") as fh:
-                fh.write(str.join('\n', corpus) + '\n')
-            return corpus
-
-        def make_test_image():
-            img = np.ones((32, 32, 3), dtype=np.uint8) * 255
-            img = Image.fromarray(img)
-            img.save("test.png")
-
-        def _bench():
-            random.seed(0)
-            args = []
-            with tempfile.TemporaryDirectory() as tdir:
-                cwd = os.getcwd()
-                os.chdir(tdir)
-                make_test_image()
-                if with_corpus:
-                    corpus = make_test_corpus()
-                    args += [corpus]
-                try:
-                    return func(*args)
-                finally:
-                    os.chdir(cwd)
-        return _bench
-    return decorator
+from . bench import *
 
 @bench()
 def test_image_tokenizer():
@@ -67,9 +19,7 @@ def test_text_tokenizer(corpus):
 
 @bench(with_corpus=True)
 def test_serial_tokenizer(corpus):
-    logger.disabled = True
     tm = tokens.TextTokenModel.build(corpus, vocab_size=500, max_len=1000)
-    logger.disabled = False
     im = tokens.ImageTokenModel(image_size=(32, 32), bitdepth=(1, 1, 1))
     sm = tokens.SerialTokenModel(
         models={"IMAGE": im, "TEXT": tm},

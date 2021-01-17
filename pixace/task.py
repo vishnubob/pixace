@@ -1,37 +1,88 @@
+import json
 import traceback
 import threading
+from functools import partial
 import multiprocessing as mp
+from queue import Full, Empty
 import numpy as np
 
 class WorkQueues(object):
     __quemap__ = {}
 
-    def __init__(self, maxsize=None, group=None):
-        (self.todo, self.done) = self._bind_queues(maxsize=maxsize, group=group)
+    class StopWork(BaseException):
+        pass
+
+    def __init__(self, maxsize=None, group=None, timeout=1):
+        (self.todo, self.done, self._running) = self._bind_queues(maxsize=maxsize, group=group)
+        self.qmap = {"todo": self.todo, "done": self.done}
+        self.timeout = timeout
+
+    def get_running(self):
+        return bool(self._running.value)
+    def set_running(self, val):
+        self._running.value = int(val)
+    running = property(get_running, set_running)
+
+    def stop(self):
+        self.running = False
+        self.flush()
 
     @classmethod
     def _bind_queues(cls, maxsize=None, group=None):
         group = group or "__default__"
         if group not in cls.__quemap__:
+            running = mp.Value('B', 1)
             todo = mp.Queue(maxsize)
             done = mp.Queue(maxsize)
-            cls.__quemap__[group] = (todo, done)
+            cls.__quemap__[group] = (todo, done, running)
         return cls.__quemap__[group]
 
+    def flush(self):
+        for key in self.qmap:
+            que = self.qmap[key]
+            while not que.empty():
+                try:
+                    que.get_nowait()
+                except Empty:
+                    break
+
+    def put(self, qname, item):
+        que = self.qmap[qname]
+        while self.running:
+            try:
+                que.put(item, True, self.timeout)
+                break
+            except Full:
+                continue
+        if not self.running:
+            raise self.StopWork
+
+    def get(self, qname):
+        que = self.qmap[qname]
+        while self.running:
+            try:
+                item = que.get(True, self.timeout)
+                break
+            except Empty:
+                continue
+        if not self.running:
+            raise self.StopWork
+        return item
+
 class QueueWorker(mp.Process):
-    def __init__(self, group=None, worker_id=None):
+    def __init__(self, group=None, worker_id=None, timeout=1):
         super().__init__()
-        self.daemon = True
+        #self.daemon = True
         self.group = group
         self.worker_id = worker_id
-        self._running = False
+        self.timeout = timeout
         self.queues = WorkQueues(group=self.group)
 
     def get_work(self):
-        return self.queues.todo.get()
+        return self.queues.get("todo")
 
     def return_result(self, job):
-        self.queues.done.put(job)
+        self.queues.put("done", job)
 
     def process_job(self, job):
         return job
@@ -44,13 +95,19 @@ class QueueWorker(mp.Process):
     def run(self):
         msg = f"{self.__class__.__name__}({self.worker_id}) Stating {self.group} worker loop ({id(self.queues.todo)})"
         print(msg)
-        self._running = True
-        while self._running:
+        while self.queues.running:
+            msg = f"{self.__class__.__name__}({self.worker_id}) loop"
+            #print(msg)
             try:
                 self.loop()
+            except self.queues.StopWork:
+                break
             except:
                 traceback.print_exc()
                 continue
+        msg = f"{self.__class__.__name__}({self.worker_id}) Stopping {self.group} worker loop ({id(self.queues.todo)})"
+        print(msg)
+        self.queues.flush()
 
 class BatchWorker(QueueWorker):
     def __init__(self, batch_size=None, **kw):
@@ -78,14 +135,13 @@ class DatasetGenerator(threading.Thread):
         self.n_workers = n_workers
         self.worker_ctor = worker_ctor
         self._workers = self.build_workers()
-        self._running = False
 
     def build_workers(self):
         workers = []
         for worker_id in range(self.n_workers):
             worker = self.worker_ctor(
                 worker_id=worker_id,
-                group=group
+                group=self.group
             )
             workers.append(worker)
             worker.start()
@@ -93,20 +149,37 @@ class DatasetGenerator(threading.Thread):
 
     def run(self):
         msg = f"{self.__class__.__name__} Stating dispatch loop ({id(self.ques.todo)})"
+        print(msg)
         for item in self.data:
-            self.ques.todo.put(item)
-            if not self._running:
+            try:
+                self.ques.put("todo", item)
+            except self.ques.StopWork:
                 break
+        self.ques.flush()
+        msg = f"{self.__class__.__name__} Stopping dispatch loop ({id(self.ques.todo)})"
+        print(msg)
+
+    def stop(self):
+        if not self.ques.running:
+            return
+        self.ques.stop()
+        for worker in self._workers:
+            worker.join()
+        self.join()
 
     def __iter__(self):
-        # XXX: this can leave data in the queue
-        self._running = True
         self.start()
-        while self._running:
-            yield self.ques.done.get()
+        try:
+            while self.ques.running:
+                try:
+                    yield self.ques.get("done")
+                except self.ques.StopWork:
+                    break
+        finally:
+            self.stop()
         raise StopIteration
 
-class TokenizeWorker(QueueWorker):
+class TokenizeWorker(BatchWorker):
     def __init__(self, tokenizer=None, **kw):
         super().__init__(**kw)
         self.tokenizer = tokenizer
@@ -120,19 +193,23 @@ class TokenizeWorker(QueueWorker):
 class TokenizeTask(object):
     def __init__(self, data=None, worker_ctor=None, group=None, seed=0):
         self.data = tuple(data)
-        self.batch_size = batch_size
         self.group = group
         self.seed = seed
         self.worker_ctor = worker_ctor
-
-    def __iter__(self):
-        dsgen = DatasetGenerator(
+        self.dsgen = DatasetGenerator(
             data=self.shuffle_forever(self.data),
             group=self.group,
             worker_ctor=self.worker_ctor,
         )
 
-        return iter(dsgen)
+    def __iter__(self):
+        return iter(self.dsgen)
+    
+    def __del__(self):
+        self.stop()
+
+    def stop(self):
+        self.dsgen.stop()
 
     def shuffle_forever(self, items):
         assert len(items) > 0
@@ -146,3 +223,17 @@ class TokenizeTask(object):
 
             for idx in item_order:
                 yield items[idx]
+
+def batch_generator(json_file=None, group=None, worker=TokenizeWorker, **kw):
+    with open(json_file) as fh:
+        data = json.load(fh)
+
+    worker_ctor = partial(worker, **kw)
+
+    task = TokenizeTask(
+        data=data, 
+        group=group,
+        worker_ctor=worker_ctor
+    )
+    
+    return task

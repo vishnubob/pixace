@@ -10,7 +10,7 @@ import trax
 import trax.layers as tl
 from trax.supervised import training
 
-from . task import TokenizeTask, TokenizeWorker
+from . task import batch_generator
 
 _get_ts = lambda: time.strftime("%m%d_%H%M")
 
@@ -46,24 +46,8 @@ class Trainer(object):
             msg = "Warning: no validation data, using training images as a substitute"
             val = train
 
-        worker_ctor = partial(
-            TokenizerWorker,
-            tokenizer=tokenizer,
-            batch_size=batch_size, 
-        )
-
-        train_gen = TrainingTask(
-            data=train, 
-            group="train",
-            worker_ctor=worker_ctor
-        )
-
-        train_gen = TrainingTask(
-            data=val, 
-            group="validation",
-            worker_ctor=worker_ctor
-        )
-
+        train_gen = batch_generator(train, tokenizer=self.tokenizer, batch_size=batch_size)
+        val_gen = batch_generator(val, tokenizer=self.tokenizer, batch_size=batch_size)
         return (train_gen, val_gen)
 
     def init_model(self):
