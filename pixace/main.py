@@ -1,19 +1,22 @@
-import sys
 import os
+import sys
+import gin
 from absl import app
 
 from . flags import FLAGS, load_flags
 from . import tokens
 
 def _handle_flags(argv):
-    toks = tokens.config.parse_and_build_tokenizer(FLAGS.tokenizer)
+    if FLAGS.tokenizer:
+        gin.bind_parameter("tokenizer.config_str", FLAGS.tokenizer)
+    toks = tokens.config.parse_and_build_tokenizer()
     FLAGS.tokenizer = toks
 
 def cli_runner(argv):
     command = argv[1]
 
     if command == "train":
-        #from . train import Trainer
+        from . train import Trainer
         _handle_flags(argv)
         Trainer._absl_main(argv)
     elif command == "predict":

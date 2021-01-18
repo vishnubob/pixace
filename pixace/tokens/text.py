@@ -12,7 +12,8 @@ class TextTokenModel(TokenModel):
 
     @property
     def n_tokens(self):
-        return super().n_tokens + self._model.vocab_size()
+        #return super().n_tokens + self._model.vocab_size()
+        return self._model.vocab_size()
 
     @classmethod
     def build(cls, corpus=None, vocab_size=None, model_type="bpe", save_as="tokens.dat", force=False, **kw):

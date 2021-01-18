@@ -72,7 +72,7 @@ class WorkQueues(object):
 class QueueWorker(mp.Process):
     def __init__(self, group=None, worker_id=None, timeout=1):
         super().__init__()
-        #self.daemon = True
+        self.daemon = True
         self.group = group
         self.worker_id = worker_id
         self.timeout = timeout
@@ -103,8 +103,10 @@ class QueueWorker(mp.Process):
             except self.queues.StopWork:
                 break
             except:
-                traceback.print_exc()
-                continue
+                self.queues.stop()
+                raise
+                #traceback.print_exc()
+                #continue
         msg = f"{self.__class__.__name__}({self.worker_id}) Stopping {self.group} worker loop ({id(self.queues.todo)})"
         print(msg)
         self.queues.flush()
@@ -118,7 +120,8 @@ class BatchWorker(QueueWorker):
 
     def return_result(self, job):
         self._current_batch.append(job)
-        assert len(self._current_batch) <= self.batch_size
+        assert len(self._current_batch) <= self.batch_size, \
+            f"{len(self._current_batch)} > {self.batch_size}"
         if len(self._current_batch) == self.batch_size:
             batch = [np.vstack(it) for it in zip(*self._current_batch)]
             assert batch[0].shape[0] == self.batch_size
@@ -163,9 +166,10 @@ class DatasetGenerator(threading.Thread):
         if not self.ques.running:
             return
         self.ques.stop()
-        for worker in self._workers:
-            worker.join()
-        self.join()
+        #for worker in self._workers:
+            #worker.join()
+        #if self.is_alive():
+            #self.join()
 
     def __iter__(self):
         self.start()
@@ -188,6 +192,7 @@ class TokenizeWorker(BatchWorker):
         work = self.tokenizer.encode(job)
         work = np.array(work).astype(np.int32)
         weights = (work != 0).astype(np.float)
+        assert work.shape == weights.shape
         return (work, work, weights)
 
 class TokenizeTask(object):

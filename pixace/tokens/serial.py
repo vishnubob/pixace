@@ -8,7 +8,7 @@ class SerialTokenModel(TokenModel):
         self.models = models
         self.order = order
         max_len = sum([self.models[key].max_len for key in self.models])
-        super().__init__(max_len=max_len, **kw)
+        super().__init__(max_len=max_len, add_markers=False, **kw)
 
     @property
     def n_tokens(self):
@@ -29,6 +29,7 @@ class SerialTokenModel(TokenModel):
             encoded.append(part)
         encoded = np.concatenate(encoded, axis=-1)
         encoded = self.pad(encoded)
+        assert len(encoded) == self.max_len
         return encoded
 
     def decode(self, toks):

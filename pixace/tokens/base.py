@@ -87,14 +87,12 @@ class TokenModel(object):
             pad_spec = (1, 0)
         else:
             raise ValueError(side)
-        pad_cnt = self.max_len - len(ary)
+        pad_cnt = max_len - len(ary)
         if pad_cnt > 0:
+            pad_shape = ary.shape[:-1] + (pad_cnt,)
             pad_value = int(self.tokens["pad"])
-            ary = np.pad(
-                ary,
-                pad_spec,
-                constant_values=(pad_value,)
-            )
+            pad = np.ones(pad_shape, dtype=ary.dtype) * pad_value
+            ary = np.concatenate((ary, pad), axis=-1)
         return ary
 
     def trim(self, ary, max_len=None, side="right"):
@@ -110,8 +108,8 @@ class TokenModel(object):
         max_len = max_len or self.max_len
         if len(ary) < max_len:
             ary = self.pad(ary, max_len=max_len, side=pad_side)
-        elif ary > self.max_len:
-            ary =self.trim(ary, max_len=max_len, side=trim_side)
+        elif len(ary) > max_len:
+            ary = self.trim(ary, max_len=max_len, side=trim_side)
         return ary
     
     def encode(self, ary):

@@ -14,8 +14,17 @@ from . task import batch_generator
 
 _get_ts = lambda: time.strftime("%m%d_%H%M")
 
-def render_samples(training_loop, logits, task, rows=2):
-    res = task.render_samples(logits)
+def render_samples(training_loop, logits, tokenizer, rows=2):
+    toks = tl.logsoftmax_sample(logits)
+    toks = np.array(toks)
+    res = {}
+    for sample in toks:
+        sample = tokenizer.decode(sample)
+        for key in sample:
+            if key not in res:
+                res[key] = list()
+            res[key].append(sample[key])
+
     with training_loop._open_summary_writers() as (stl, sel):
         for (key, val) in res.items():
             if key == "images":
@@ -34,24 +43,19 @@ class Trainer(object):
         self.model_type = model_type
         self.weights_dir = weights_dir
         self.tokenizer = tokenizer
+        self.max_len = self.tokenizer.max_len
     
     def init_generators(self, batch_size=None, train=None, val=None):
-        with open(train) as fh:
-            train = json.load(fh)
-
-        if val:
-            with open(val) as fh:
-                val = json.load(fh)
-        else:
+        if val is None:
             msg = "Warning: no validation data, using training images as a substitute"
             val = train
 
-        train_gen = batch_generator(train, tokenizer=self.tokenizer, batch_size=batch_size)
-        val_gen = batch_generator(val, tokenizer=self.tokenizer, batch_size=batch_size)
+        train_gen = batch_generator(train, tokenizer=self.tokenizer, batch_size=batch_size, group="train")
+        val_gen = batch_generator(val, tokenizer=self.tokenizer, batch_size=batch_size, group="validation")
         return (train_gen, val_gen)
 
     def init_model(self):
-        msg = f"Initializing {self.model_type} model (n_tokens={self.n_tokens}, max_len={self.max_len}, image_size={self.image_size}, bitdepth={self.bitdepth})"
+        msg = f"Initializing {self.model_type} model (n_tokens={self.n_tokens}, max_len={self.max_len})"
         print(msg)
         if self.model_type == "transformer":
             model = trax.models.TransformerLM(self.n_tokens, max_len=self.max_len, mode="train")
@@ -62,7 +66,16 @@ class Trainer(object):
             raise ValueError(msg)
         return model
 
-    def train(self, batch_size=8, steps_per_epoch=100, steps_per_eval=None, n_epochs=10, train_data=None, val_data=None, max_len=None, spm_model=None):
+    def train(self, train_data=None, val_data=None, batch_size=None, **kw):
+        (train_gen, eval_gen) = self.init_generators(batch_size=batch_size, train=train_data, val=val_data)
+        (train_itr, eval_itr) = (iter(train_gen), iter(eval_gen))
+        try:
+            self.train_core(train_itr=train_itr, eval_itr=eval_itr, batch_size=batch_size, **kw)
+        finally:
+            train_gen.stop()
+            eval_gen.stop()
+
+    def train_core(self, batch_size=8, steps_per_epoch=100, steps_per_eval=None, n_epochs=10, train_itr=None, eval_itr=None):
         output_dir = os.path.join(self.weights_dir, self.model_name)
         lr = trax.lr.multifactor()
         loss = tl.WeightedCategoryCrossEntropy()
@@ -74,10 +87,7 @@ class Trainer(object):
         if steps_per_eval is None:
             steps_per_eval = max(1, steps_per_epoch // 10)
 
-        (train_gen, eval_gen) = self.init_generators(batch_size=batch_size, train=train_data, val=val_data)
-        (train_itr, eval_itr) = (iter(train_gen), iter(eval_gen))
-
-        self.n_tokens = train_gen.tokenizer.n_tokens
+        self.n_tokens = self.tokenizer.n_tokens
 
         model = self.init_model()
         train_task = training.TrainTask(
@@ -103,7 +113,7 @@ class Trainer(object):
 
         sample_batch = next(eval_itr)
         logits = model(sample_batch[0])
-        render_samples(training_loop, logits, eval_gen)
+        render_samples(training_loop, logits, self.tokenizer)
 
         for epoch in range(n_epochs):
             training_loop.run(steps_per_epoch)
@@ -112,7 +122,7 @@ class Trainer(object):
             # sample output
             sample_batch = next(eval_itr)
             logits = model(sample_batch[0])
-            render_samples(training_loop, logits, eval_gen)
+            render_samples(training_loop, logits, self.tokenizer)
 
     @classmethod
     def _absl_main(cls, argv):

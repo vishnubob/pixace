@@ -1,3 +1,4 @@
+import gin
 from . bench import *
 
 @bench()
@@ -47,3 +48,18 @@ def test_tokenizer_config(corpus):
     ]
 
     tokenizer = tokens.config.parse_and_build_tokenizer(tokenizers)
+
+@bench(with_corpus=True)
+def test_tokenizer_gin_config(corpus):
+    tokens.TextTokenModel.build(corpus, vocab_size=500, max_len=1000, save_as="test.spm")
+
+    tokenizers = [
+        'type=image,key=image,bitdepth=544,image_size=32x32,colorspace=rgb,n_channels=3',
+        'type=text,key=label,model_file=test.spm,max_len=500',
+        'type=image,key=image,bitdepth=544,image_size=32x32,colorspace=rgb,n_channels=3'
+    ]
+
+    gin.bind_parameter("tokenizer.config_str", tokenizers)
+    tokenizer = tokens.config.parse_and_build_tokenizer()
+    assert tokenizer
+    #print("!!\n", gin.config_str(), "!!\n")
