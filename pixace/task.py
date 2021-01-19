@@ -103,10 +103,9 @@ class QueueWorker(mp.Process):
             except self.queues.StopWork:
                 break
             except:
+                traceback.print_exc()
                 self.queues.stop()
                 raise
-                #traceback.print_exc()
-                #continue
         msg = f"{self.__class__.__name__}({self.worker_id}) Stopping {self.group} worker loop ({id(self.queues.todo)})"
         print(msg)
         self.queues.flush()

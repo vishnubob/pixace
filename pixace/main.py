@@ -7,10 +7,11 @@ from . flags import FLAGS, load_flags
 from . import tokens
 
 def _handle_flags(argv):
-    if FLAGS.tokenizer:
-        gin.bind_parameter("tokenizer.config_str", FLAGS.tokenizer)
-    toks = tokens.config.parse_and_build_tokenizer()
-    FLAGS.tokenizer = toks
+    from . import factory
+    gin.bind_parameter("pixace.tokenizer", FLAGS.tokenizer)
+    gin.bind_parameter("pixace.model_name", FLAGS.model_name)
+    gin.bind_parameter("pixace.weights_dir", FLAGS.weights_dir)
+    gin.bind_parameter("pixace.model_type", FLAGS.model_type)
 
 def cli_runner(argv):
     command = argv[1]

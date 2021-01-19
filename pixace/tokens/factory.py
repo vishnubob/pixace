@@ -1,4 +1,3 @@
-import gin
 from . serial import SerialTokenModel
 from . text import TextTokenModel
 from . image import ImageTokenModel
@@ -57,7 +56,6 @@ def build_tokenizer(tok_list):
         order.append(t_key)
     return SerialTokenModel(models=models, order=order)
 
-@gin.configurable('tokenizer')
 def parse_and_build_tokenizer(config_str=None):
     tok_list = [parse_tokenizer(val) for val in config_str]
     return build_tokenizer(tok_list)
