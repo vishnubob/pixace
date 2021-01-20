@@ -18,17 +18,22 @@ def render_samples(training_loop, logits, tokenizer, rows=2):
     toks = tl.logsoftmax_sample(logits)
     toks = np.array(toks)
     res = {}
+    images = []
     for sample in toks:
         sample = tokenizer.decode(sample)
         for key in sample:
             if key not in res:
                 res[key] = list()
             res[key].append(sample[key])
+            # XXX: hard wired key, should be based on type
+            if key == "image":
+                images.append(np.array(sample[key], dtype=np.uint8))
 
     with training_loop._open_summary_writers() as (stl, sel):
-        for (key, val) in res.items():
-            if key == "images":
-                sel[0].images(f"gen/{training_loop._step}", images=val, step=training_loop._step, rows=rows)
+        #for (key, val) in res.items():
+            #if key == "image":
+                #sel[0].images(f"gen/{training_loop._step}", images=val, step=training_loop._step, rows=rows)
+        sel[0].images(f"gen/{training_loop._step}", images=images, step=training_loop._step, rows=rows)
 
 def backup_checkpoint(output_dir, training_loop):
     old_path = os.path.join(output_dir, f"model.pkl.gz")

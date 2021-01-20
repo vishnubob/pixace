@@ -11,7 +11,6 @@ from absl import logging
 from PIL import Image
 import gin
 
-from . tokens import ImageTokenModel, SentenceTokenModel, SerialTokenModel
 from . utils import download_image_from_web
 
 def adjust_reformer(scope="decode", chunk_len=None, n_hashes=4):
@@ -72,7 +71,7 @@ def decode_output(img_list, batch_size=None, scale=None, tokenizer=None, image_k
     for row in img_list:
         parts = [tokenizer.decode(it) for it in row] 
         decodes.append(parts)
-        row = [np.array(it[image_key], astype=np.uint8) for it in parts]
+        row = [np.array(it[image_key], dtype=np.uint8) for it in parts]
         row = [np.pad(it, ((1, 1), (1, 1), (0, 0))) for it in row]
         row = np.vstack(row)
         rows.append(row)
@@ -86,9 +85,15 @@ def decode_output(img_list, batch_size=None, scale=None, tokenizer=None, image_k
 class Decoder(object):
     def __init__(self, model=None, tokenizer=None):
         self.model = model
-        self.max_len = self.model.max_len
         self.tokenizer = tokenizer
-        self.n_tokens = self.tokenizer.n_tokens
+
+    @property
+    def max_len(self):
+        return self.tokenizer.max_len
+    
+    @property
+    def n_tokens(self):
+        return self.tokenizer.n_tokens
 
     @classmethod
     def load(cls, tokenizer=None, **kw):
@@ -120,9 +125,6 @@ class Decoder(object):
 
         length = self.max_len - cut - 1
 
-        if isinstance(temperature, (int, float)):
-            temperature = [temperature] 
-
         out_images = []
         for temp in temperature:
             temp = float(temp)
@@ -130,18 +132,21 @@ class Decoder(object):
             row = autoreg(self.model, batch_size=batch_size, inp=inp, length=length, temperature=temp)
             out_images.append(row)
 
-        return decode_output(out_images, batch_size=batch_size, scale=scale, tokenizer=self.serial_tokenizer)
+        return decode_output(out_images, batch_size=batch_size, scale=scale, tokenizer=self.tokenizer)
 
     @classmethod
     def _absl_main(cls, argv):
         from . flags import FLAGS
-        from . factory import model_factory
+        from . factory import get_factory
 
-        (factory, tokenizer) = model_factory()
+        factory = get_factory()
         model = factory.load_model(checkpoint=FLAGS.checkpoint, mode="predict")
-        instance = cls(model=model, tokenizer=tokenizer)
+        decoder = cls(model=model, tokenizer=factory.tokenizer)
 
-        img = instance.predict(
+        if isinstance(FLAGS.temperature, (int, float)):
+            FLAGS.temperature = [FLAGS.temperature] 
+
+        (img, decodes) = decoder.predict(
             batch_size=FLAGS.batch_size,
             temperature=FLAGS.temperature,
             prompts=FLAGS.prompt,
@@ -150,3 +155,10 @@ class Decoder(object):
         )
 
         img.save(FLAGS.out)
+        cols = [list() for x in range(len(FLAGS.temperature))]
+        for row in decodes:
+            for (idx, it) in enumerate(row):
+                label = it["label"]
+                cols[idx].append(label)
+        for col in cols:
+            print(col)

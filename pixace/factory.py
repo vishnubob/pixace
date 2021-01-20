@@ -43,7 +43,7 @@ class PixaceFactory(object):
         else:
             msg = f"Unknown model type '{self.model_type}'"
             raise ValueError(msg)
-        return (model, self.tokenizer)
+        return model
 
     def load_model(self, checkpoint=None, scope="decode", mode="predict"):
         if checkpoint is None:
@@ -57,7 +57,7 @@ class PixaceFactory(object):
         msg = f"Loading {self.model_type} model from '{checkpoint}'"
         print(msg)
         model.init_from_file(checkpoint, weights_only=True)
-        return (model, self.tokenizer)
+        return model
 
 @gin.configurable('pixace')
 def get_factory(model_name=None, weights_dir=None, model_type=None, tokenizer=None):

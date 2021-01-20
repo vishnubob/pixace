@@ -8,24 +8,7 @@ def common_flags():
     flags.DEFINE_string('model_type', "reformer", help=('Model type (transformer, reformer)'))
     flags.DEFINE_string('weights_dir', 'model-weights', help=('Top level directory for model data.'))
     flags.DEFINE_integer('batch_size', 16, help=('Batch size for training.'))
-    # XXX: allow other aspect ratios
-    #flags.DEFINE_integer('image_size', 32, help=('Edge size for square image.'))
-    #flags.DEFINE_list('bitdepth', [5, 4, 4], help=('HSV bitdepths'))
-    #flags.DEFINE_string('spm_model', None, help=('SPM model'))
-    #flags.DEFINE_integer('max_len', None, help=('max len'))
     flags.DEFINE_multi_string('tokenizer', None, help=('Tokenizer spec, can be used more than once'))
-
-    """
-    @flags.validator("bitdepth", "bitdepth requires three comma seperated ints")
-    def _validate_bitdepth(value):
-        if len(value) != 3:
-            return False
-        digs = [
-            (type(it) is int) or (type(it) is str and it.isdigit()) 
-            for it in value
-        ]
-        return all(digs)
-    """
 
 def train_flags():
     common_flags()
