@@ -117,8 +117,8 @@ class Trainer(object):
         from . factory import get_factory
 
         factory = get_factory()
-        (model, tokenizer) = factory.init_model(mode="train")
-        trainer = cls(model=model, tokenizer=tokenizer)
+        model = factory.init_model(mode="train")
+        trainer = cls(model=model, tokenizer=factory.tokenizer)
 
         trainer.train(
             train_data=FLAGS.train_data,
