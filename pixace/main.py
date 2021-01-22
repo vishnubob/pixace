@@ -33,6 +33,10 @@ def cli_runner(argv):
     if command == "train":
         from . train import Trainer
         _bind_params(argv)
+        try:
+            _load_params(argv)
+        except ValueError:
+            pass
         Trainer._absl_main(argv)
     elif command == "predict":
         from . decode import Decoder

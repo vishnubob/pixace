@@ -37,7 +37,6 @@ def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0):
 
     result = np.concatenate(result, axis=-1)
 
-
     if inp is not None:
         result = np.concatenate((inp, result), axis=-1)
     
@@ -158,7 +157,7 @@ class Decoder(object):
         cols = [list() for x in range(len(FLAGS.temperature))]
         for row in decodes:
             for (idx, it) in enumerate(row):
-                label = it["label"]
+                label = it["text"]
                 cols[idx].append(label)
         for col in cols:
             print(col)

@@ -69,7 +69,7 @@ class WorkQueues(object):
             raise self.StopWork
         return item
 
-class QueueWorker(mp.Process):
+class QueueTask(mp.Process):
     def __init__(self, group=None, worker_id=None, timeout=1):
         super().__init__()
         self.daemon = True
@@ -110,7 +110,7 @@ class QueueWorker(mp.Process):
         print(msg)
         self.queues.flush()
 
-class BatchWorker(QueueWorker):
+class BatchTask(QueueTask):
     def __init__(self, batch_size=None, **kw):
         super().__init__(**kw)
         assert batch_size is not None
@@ -182,7 +182,7 @@ class DatasetGenerator(threading.Thread):
             self.stop()
         raise StopIteration
 
-class TokenizeWorker(BatchWorker):
+class TokenizeTask(BatchTask):
     def __init__(self, tokenizer=None, **kw):
         super().__init__(**kw)
         self.tokenizer = tokenizer
@@ -194,7 +194,7 @@ class TokenizeWorker(BatchWorker):
         assert work.shape == weights.shape
         return (work, work, weights)
 
-class TokenizeTask(object):
+class TaskManager(object):
     def __init__(self, data=None, worker_ctor=None, group=None, seed=0):
         self.data = tuple(data)
         self.group = group
@@ -228,16 +228,16 @@ class TokenizeTask(object):
             for idx in item_order:
                 yield items[idx]
 
-def batch_generator(json_file=None, group=None, worker=TokenizeWorker, **kw):
+def batch_generator(json_file=None, group=None, task=TokenizeTask, **kw):
     with open(json_file) as fh:
         data = json.load(fh)
 
-    worker_ctor = partial(worker, **kw)
+    worker_ctor = partial(task, **kw)
 
-    task = TokenizeTask(
+    task_manager = TaskManager(
         data=data, 
         group=group,
         worker_ctor=worker_ctor
     )
     
-    return task
+    return task_manager
