@@ -1,12 +1,24 @@
 # pixace
 
-This is my pet project to experiment with modeling image data using [transformers](https://arxiv.org/abs/1706.03762). I only have access to a single 10GB GPU, so my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
+## Mixed Media Transformers
+
+[Transformers](https://arxiv.org/abs/1706.03762) are a machine learning architecture that excels at modeling sequences of data.  It was originally designed to create natual language models capable of automatically translating one human language to another, but since their introduction in 2017, we have witnessed an explosion of different applications and techniques that prove transformers are capable of modeling more than just human language: they are useful in any context when what you want to model can be represented as a flat, 1D sequence of values.
+
+For example: images.  The challenge with modelling image data with transformers is their density of the information.  The transformer architecture is fully capable of utilizing that information, but it requires one of two things to make it pracitcal: lots of GPUs/TPUs/vector processors, or reducing the information content of the images.  I only have access to a single 10GB GPU, so my objective was to train a network that balanced image complexity with quality.  If necessity is the mother of invention, design constraints are the midwives.
 
 ## [ Check out the [colab notebook](https://colab.research.google.com/github/vishnubob/pixace/blob/main/examples/pixace_demo.ipynb) ]
 
 ![Part of a complete breakfast](https://raw.githubusercontent.com/vishnubob/pixace/media/media/ttt-collage.jpg)
 
-Pixace uses decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
+Pixace uses decoder-only transformer and reformer architectures (language models) provided by [trax](https://github.com/google/trax).  At its core is a tiered tokenizer capable of packing a combination of data types into a single flat array of integers, which represent the individual tokens.  This means you can string together prompts that combine images and text in any order you wish, along with adding new tokenizers for data types not yet supported, such as GIS, stock market, amino acids, vector graphics, or whatever else you can think of.
+
+Right out of the box, the tokenizer makes it easy to generate an image from text, or generate text from an image, or generate an image from another image, each with different resolutions, etc.  A quick image makes this clear how this works:
+
+
+
+## Image Data
+
+In order to tackle the complexity of images, pixace reduces both the resolution and colorspace of each image before using it for training.  There a few design choices that went into this, but here is the terse version:
 
 1. Load an image, scale it down
 2. Convert to HSV colorspace
