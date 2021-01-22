@@ -47,10 +47,11 @@ def test_tokenizer_config(corpus):
         'type=image,key=image,bitdepth=544,image_size=32x32,colorspace=rgb,n_channels=3'
     ]
 
-    tokenizer = tokens.config.parse_and_build_tokenizer(tokenizers)
+    tokenizer = tokens.factory.parse_and_build_tokenizer(tokenizers)
 
 @bench(with_corpus=True)
 def test_tokenizer_gin_config(corpus):
+    from . pixace.tokens import factory
     tokens.TextTokenModel.build(corpus, vocab_size=500, max_len=1000, save_as="test.spm")
 
     tokenizers = [
@@ -59,7 +60,7 @@ def test_tokenizer_gin_config(corpus):
         'type=image,key=image,bitdepth=544,image_size=32x32,colorspace=rgb,n_channels=3'
     ]
 
-    gin.bind_parameter("tokenizer.config_str", tokenizers)
-    tokenizer = tokens.config.parse_and_build_tokenizer()
+    gin.bind_parameter("pixace.tokenizer", tokenizers)
+    tokenizer = tokens.factory.parse_and_build_tokenizer()
     assert tokenizer
     #print("!!\n", gin.config_str(), "!!\n")
