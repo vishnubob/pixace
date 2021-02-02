@@ -15,7 +15,7 @@ class Token(object):
 
 class TokenMap(object):
     def __init__(self, tokens=tuple()):
-        self.tokens = tokens
+        self.tokens = tuple(tokens)
         self.names = {sp.name: sp.value for sp in self.tokens}
         self.values = {sp.value: sp.name for sp in self.tokens}
         assert len(self.names) == len(self.tokens)
@@ -62,6 +62,10 @@ class TokenModel(object):
     @property
     def n_tokens(self):
         return len(self.tokens)
+
+    def token_map(self):
+        tmap = [tk.name for tk in self.tokens.tokens]
+        return tuple(tmap)
 
     def add_bos_eos(self, ary):
         bos = int(self.tokens["bos"])

@@ -38,6 +38,16 @@ def test_serial_tokenizer(corpus):
     assert np.all(np.array(decoded_item["IMAGE"]) == np.array(item["IMAGE"]))
 
 @bench(with_corpus=True)
+def test_token_map(corpus):
+    tm = tokens.TextTokenModel.build(corpus, vocab_size=500, max_len=1000)
+    im = tokens.ImageTokenModel(image_size=(32, 32), bitdepth=(1, 1, 1))
+    sm = tokens.SerialTokenModel(
+        models={"IMAGE": im, "TEXT": tm},
+        order=["IMAGE", "TEXT"]
+    )
+    assert len(sm.token_map()) == sm.n_tokens
+
+@bench(with_corpus=True)
 def test_tokenizer_config(corpus):
     tokens.TextTokenModel.build(corpus, vocab_size=500, max_len=1000, save_as="test.spm")
 
@@ -49,9 +59,11 @@ def test_tokenizer_config(corpus):
 
     tokenizer = tokens.factory.parse_and_build_tokenizer(tokenizers)
 
+@pytest.mark.slow
 @bench(with_corpus=True)
 def test_tokenizer_gin_config(corpus):
-    from . pixace.tokens import factory
+    from . pixace import tokens
+    from . pixace import factory
     tokens.TextTokenModel.build(corpus, vocab_size=500, max_len=1000, save_as="test.spm")
 
     tokenizers = [

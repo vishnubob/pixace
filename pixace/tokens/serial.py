@@ -15,11 +15,20 @@ class SerialTokenModel(TokenModel):
         n_tokens = sum([self.models[key].n_tokens for key in self.order])
         return super().n_tokens + n_tokens
 
-    def encode(self, parts): 
-        assert len(parts) == len(self.models)
+    def token_map(self):
+        tmap = tuple()
+        for key in self.order:
+            model = self.models[key]
+            tmap += model.token_map()
+        #tmap += super().token_map()
+        return tmap
+
+    def encode(self, parts, pad=True): 
         encoded = []
         offset = 0
         for key in self.order:
+            if key not in parts:
+                continue
             (model, part) = (self.models[key], parts[key])
             if isinstance(model, ImageTokenModel):
                 part = model.encode_image(part) + offset
@@ -28,8 +37,9 @@ class SerialTokenModel(TokenModel):
             offset += model.n_tokens
             encoded.append(part)
         encoded = np.concatenate(encoded, axis=-1)
-        encoded = self.pad(encoded)
-        assert len(encoded) == self.max_len
+        if pad:
+            encoded = self.pad(encoded)
+            assert len(encoded) == self.max_len
         return encoded
 
     def decode(self, toks):

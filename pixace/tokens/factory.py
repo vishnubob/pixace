@@ -1,3 +1,4 @@
+import gin
 from . serial import SerialTokenModel
 from . text import TextTokenModel
 from . image import ImageTokenModel
@@ -57,5 +58,6 @@ def build_tokenizer(tok_list):
     return SerialTokenModel(models=models, order=order)
 
 def parse_and_build_tokenizer(config_str=None):
+    config_str = config_str or gin.config.query_parameter("pixace.tokenizer")
     tok_list = [parse_tokenizer(val) for val in config_str]
     return build_tokenizer(tok_list)

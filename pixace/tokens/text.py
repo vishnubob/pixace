@@ -10,9 +10,14 @@ class TextTokenModel(TokenModel):
         assert os.path.exists(model_file)
         self._model = spm.SentencePieceProcessor(model_file=model_file)
 
+    def token_map(self):
+        specials = super().token_map()
+        toks = np.arange(len(self.tokens.tokens), self.n_tokens).astype(int)
+        words = tuple(self._model.decode(tk) for tk in toks.tolist())
+        return tuple(specials) + tuple(words)
+
     @property
     def n_tokens(self):
-        #return super().n_tokens + self._model.vocab_size()
         return self._model.vocab_size()
 
     @classmethod

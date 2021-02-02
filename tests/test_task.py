@@ -20,4 +20,4 @@ def test_stop():
     it = next(itr)
     gen.stop()
     assert len(it) == 3
-    assert it[0].shape == (32, 32 * 32 + 3)
+    assert it[0].shape == (32, 32 * 32 + 2)
