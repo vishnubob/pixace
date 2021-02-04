@@ -46,7 +46,7 @@ class PixaceFactory(object):
             raise ValueError(msg)
         return model
 
-    def load_model(self, checkpoint=None, scope="decode", mode="predict"):
+    def load_model(self, checkpoint=None, batch_size=None, scope="decode", mode="predict"):
         if checkpoint is None:
             checkpoint = os.path.join(self.output_dir, "model.pkl.gz")
         if self.model_type == "reformer" and mode == "predict":
@@ -57,8 +57,11 @@ class PixaceFactory(object):
             model = self.init_model(mode=mode)
         msg = f"Loading {self.model_type} model from '{checkpoint}'"
         print(msg)
-        sig = jnp.zeros((1, self.max_len), dtype=jnp.uint8)
-        sig = trax.shapes.signature(sig)
+        if batch_size:
+            sig = jnp.zeros((1, self.max_len), dtype=jnp.uint8)
+            sig = trax.shapes.signature(sig)
+        else:
+            sig = None
         model.init_from_file(checkpoint, weights_only=True, input_signature=sig)
         return model
 
