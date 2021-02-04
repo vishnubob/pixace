@@ -17,7 +17,7 @@ from . utils import download_image_from_web
 from . caption import caption_image
 
 def get_uuid():
-    return str(uuid.uuid4()).split('-')[1]
+    return str(uuid.uuid4()).split('-')[-1]
 
 def autoreg(model, batch_size=1, inp=None, length=1, temperature=1.0, eos_id=None):
     if inp is not None:
@@ -50,7 +50,7 @@ def decode_batches(batches, tokenizer=None):
     for batch in batches:
         yield [tokenizer.decode(it) for it in batch] 
 
-def export_gallery(batches, scale=None, tokenizer=None, outdir="gallery/public/images/photos"):
+def export_images_with_captions(batches, scale=None, tokenizer=None, outdir='.'):
     os.makedirs(outdir, exist_ok=True)
     batches = decode_batches(batches, tokenizer)
     name = get_uuid()
@@ -82,6 +82,7 @@ def export_gallery(batches, scale=None, tokenizer=None, outdir="gallery/public/i
             img = img.resize(size)
             img = caption_image(img, caption)
             img.save(imgfn, exif=payload)
+            yield imgfn
 
 # XXX: support more than just single image
 def decode_output(img_list, batch_size=None, scale=None, tokenizer=None, image_key="image"):
@@ -129,7 +130,7 @@ class Decoder(object):
         self.model.init(signature)
         self.model.weights = weights
 
-    def predict(self, batch_size=1, prompts=None, cut=None, temperature=1, scale=256):
+    def predict(self, batch_size=1, prompts=None, cut=None, temperature=1, scale=256, outdir='.'):
         output = []
         if prompts:
             batch_size = min(batch_size, len(prompts))
@@ -158,7 +159,7 @@ class Decoder(object):
             output.append(row)
 
         #return decode_output(output, batch_size=batch_size, scale=scale, tokenizer=self.tokenizer)
-        export_gallery(output, scale=scale, tokenizer=self.tokenizer)
+        return export_images_with_captions(output, scale=scale, tokenizer=self.tokenizer, outdir=outdir)
 
     @classmethod
     def _absl_main(cls, argv):
@@ -172,10 +173,12 @@ class Decoder(object):
         if isinstance(FLAGS.temperature, (int, float)):
             FLAGS.temperature = [FLAGS.temperature] 
 
-        decoder.predict(
+        res = decoder.predict(
             batch_size=FLAGS.batch_size,
             temperature=FLAGS.temperature,
             prompts=FLAGS.prompt,
             cut=FLAGS.cut,
-            scale=FLAGS.scale
+            scale=FLAGS.scale,
+            outdir=FLAGS.out
         )
+        return list(res)

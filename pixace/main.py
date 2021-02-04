@@ -14,9 +14,9 @@ def _load_prompts(argv):
 
 def load_config(model_name=None, weights_dir=None, checkpoint=None, config_filename="config.gin"):
     if model_name is not None:
-        config_dir = os.path.join(FLAGS.weights_dir, FLAGS.model_name)
+        config_dir = os.path.join(weights_dir, model_name)
     elif checkpoint is not None:
-        config_dir = os.path.split(os.path.abspath(FLAGS.checkpoint))[0]
+        config_dir = os.path.split(os.path.abspath(checkpoint))[0]
     else:
         msg = f"You need to provide a model name or a checkpoint file"
         raise ValueError(msg)

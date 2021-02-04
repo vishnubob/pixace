@@ -76,12 +76,25 @@ class TokenModel(object):
             constant_values=(bos, eos)
         )
 
-    def filter_values(self, ary, values=None):
+    def filter_tokens(self, ary, values=None):
         values = values or \
             tuple(self.tokens.values.keys())
         for val in values:
             ary = ary[ary != val]
         return ary
+
+    def get_payload(self, ary):
+        bos = int(self.tokens["bos"])
+        eos = int(self.tokens["eos"])
+
+        if not (eos in ary and bos in ary):
+            return self.filter_tokens(ary)
+        bos_idx = np.argmax(ary == bos) + 1
+        eos_idx = np.argmax(ary == eos)
+        if bos_idx >= eos_idx:
+            return self.filter_tokens(ary)
+
+        return ary[bos_idx:eos_idx]
     
     def pad(self, ary, max_len=None, side="right"):
         max_len = max_len or self.max_len
@@ -124,6 +137,6 @@ class TokenModel(object):
 
     def decode(self, ary):
         if self.add_markers:
-            ary = self.filter_values(ary)
+            ary = self.get_payload(ary)
         ary = ary - self.offset
         return ary

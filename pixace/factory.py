@@ -2,6 +2,7 @@ import os
 import time
 import trax
 import gin
+import jax.numpy as jnp
 
 get_timestamp = lambda: time.strftime("%m%d_%H%M")
 
@@ -56,7 +57,9 @@ class PixaceFactory(object):
             model = self.init_model(mode=mode)
         msg = f"Loading {self.model_type} model from '{checkpoint}'"
         print(msg)
-        model.init_from_file(checkpoint, weights_only=True)
+        sig = jnp.zeros((1, self.max_len), dtype=jnp.uint8)
+        sig = trax.shapes.signature(sig)
+        model.init_from_file(checkpoint, weights_only=True, input_signature=sig)
         return model
 
 @gin.configurable('pixace')

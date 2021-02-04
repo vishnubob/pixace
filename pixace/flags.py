@@ -24,7 +24,7 @@ def predict_flags():
     flags.DEFINE_list('prompt', [], help=('one or more prompt images, optional'))
     flags.DEFINE_integer('cut', None, help=('Cut input image at pixel #'))
     flags.DEFINE_integer('scale', 5, help=('Scale output'))
-    flags.DEFINE_string('out', "collage.png", help=('Where to save the prediction image'))
+    flags.DEFINE_string('out', ".", help=('Where to save the prediction image'))
     flags.DEFINE_list('temperature', [1], help=('One or more temperature values used for predictions, can repeat the same value.'))
 
 def download_flags():
